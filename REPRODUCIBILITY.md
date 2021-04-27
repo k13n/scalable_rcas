@@ -9,9 +9,10 @@
 4. [Experiments](#experiments)
 
 This page details the steps needed to reproduce the findings of the
-paper: Kevin Wellenzohn, Michael Böhlen, Sven Helmer, Antoine Pietri,
-Stefano Zacchiroli. Scalable Content-and-Structure Indexing. 2021.
+paper:
 
+- **Scalable Content-and-Structure Indexing**
+- Kevin Wellenzohn, Michael Böhlen, Sven Helmer, Antoine Pietri, Stefano Zacchiroli
 
 
 ## Prerequisites
