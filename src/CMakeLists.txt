@@ -1,0 +1,35 @@
+project (cas)
+
+add_library(cas
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/binary_key.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/bulk_loader.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/bulk_loader_stats.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/index_stats.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/histogram.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/key.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/key_decoder.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/key_encoder.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/memory_page.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/memory_pool.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/pager.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/partition.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/partition_table.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/path_matcher.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/query.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/query_stats.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/record.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/search_key.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/swh_pid.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/util.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/page_buffer.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/linear_search.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/types.cpp
+  #
+  ${CMAKE_CURRENT_SOURCE_DIR}/benchmark/exp_dataset_size.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/benchmark/exp_dsc_computation.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/benchmark/exp_memory_management.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/benchmark/exp_page_size.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/benchmark/exp_structure.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/benchmark/exp_lazy_interleaving.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/benchmark/exp_querying.cpp
+)
