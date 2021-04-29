@@ -2,8 +2,8 @@
 
 This is the code for the following paper:
 
-**Scalable Content-and-Structure Indexing**
-Kevin Wellenzohn, Michael Böhlen, Sven Helmer, Antoine Pietir, Stefan Zacchiroli.
+- **Scalable Content-and-Structure Indexing**
+- Kevin Wellenzohn, Michael Böhlen, Sven Helmer, Antoine Pietri, Stefano Zacchiroli
 
 ## Reproducibility
 
