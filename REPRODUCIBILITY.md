@@ -376,20 +376,10 @@ ruby scripts/rcasplus_query_performance.rb "index_lazy_no.bin"  "queries/cas_que
 This experiment is covered by `exp_dsc_computation` that can be
 executed as follows (change the parameters as needed).
 
-In the paper we report the runtime once without direct I/O and once
-with direct I/O.
-
-Without direct I/O:
-
 ```bash
-./release/exp_dsc_computation --direct_io=0
+./release/exp_dsc_computation
 ```
 
-With direct I/O:
-
-```bash
-./release/exp_dsc_computation --direct_io=1
-```
 
 
 ### Frontloading Experiment
@@ -397,20 +387,10 @@ With direct I/O:
 This experiment is covered by `exp_memory_management` that can be
 executed as follows (change the parameters as needed).
 
-In the paper we report the runtime once without direct I/O and once
-with direct I/O.
-
-Without direct I/O:
-
 ```bash
-./release/exp_memory_management --direct_io=0
+./release/exp_memory_management
 ```
 
-With direct I/O:
-
-```bash
-./release/exp_memory_management --direct_io=1
-```
 
 
 ### Cost Model Experiment

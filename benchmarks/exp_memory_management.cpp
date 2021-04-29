@@ -6,7 +6,9 @@ int main_(int argc, char** argv) {
   constexpr auto PAGE_SZ = cas::PAGE_SZ_16KB;
   using Exp = benchmark::ExpMemoryManagement<VType, PAGE_SZ>;
 
-  cas::Context context;
+  cas::Context context = {
+    .use_direct_io_ = true,
+  };
   benchmark::option_parser::Parse(argc, argv, context);
 
   std::vector<cas::MemoryPlacement> approaches = {
