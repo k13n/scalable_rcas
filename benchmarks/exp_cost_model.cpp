@@ -8,6 +8,9 @@ void VaryInputSize(cas::Context context) {
   constexpr auto PAGE_SZ = cas::PAGE_SZ_16KB;
   using Exp = benchmark::ExpDatasetSize<VType, PAGE_SZ>;
 
+  // fix memory size at 50GB
+  context.mem_size_bytes_ = 50'000'000'000;
+
   std::vector<size_t> dataset_sizes = {
     100'000'000'000,
     200'000'000'000,
