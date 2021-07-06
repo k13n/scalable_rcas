@@ -46,7 +46,16 @@ void benchmark::ExpQuerying<VType, PAGE_SZ>::Execute() {
 template<class VType, size_t PAGE_SZ>
 void benchmark::ExpQuerying<VType, PAGE_SZ>::PrintOutput() {
   std::cout << "\n";
-  cas::util::Log("Summary:\n\n");
+  cas::util::Log("Results per query:\n\n");
+
+  int i = 0;
+  for (const auto& stat : results_) {
+    std::cout << "Q" << i << ";"
+      << stat.nr_matches_ << ";"
+      << (stat.runtime_mus_ / 1000) << "\n";
+    ++i;
+  }
+  std::cout << "\n";
 
   double runtime_mus = 0;
   double page_reads = 0;
