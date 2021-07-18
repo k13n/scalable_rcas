@@ -19,7 +19,6 @@ class BulkLoader {
   MemoryPools<PAGE_SZ> mpool_;
   Pager<PAGE_SZ>& pager_;
   const Context& context_;
-  page_nr_t max_page_nr_ = 1;
   long partition_counter_ = 0;
   std::array<std::unique_ptr<std::array<std::byte, PAGE_SZ>>, cas::BYTE_MAX> ref_keys_;
   std::unique_ptr<std::array<std::byte, PAGE_SZ>> shortened_key_buffer_;
@@ -46,7 +45,6 @@ public:
   void Load();
   BulkLoaderStats& Stats() { return stats_; }
 
-  std::string getKey(int s2,int j);
 private:
   size_t Construct(
       cas::Partition<PAGE_SZ>& partition,
@@ -60,33 +58,14 @@ private:
       Partition<PAGE_SZ>& partition,
       const cas::Dimension dimension);
 
-  /* void PartitionTreeRS(std::unique_ptr<Node>& node); */
-
   void ConstructLeafNode(
       Node& node,
       cas::Partition<PAGE_SZ>& partition);
 
-  /* size_t WritePartition( */
-  /*     std::deque<std::pair<std::byte, Node*>> nodes, */
-  /*     cas::page_nr_t page_nr); */
-
   size_t SerializeNode(Node& node);
-
-  size_t SerializePartitionToPage(
-      Node& node,
-      cas::IdxPage<PAGE_SZ>& page,
-      size_t offset = 0);
-
-  /* void WritePage(const cas::IdxPage<PAGE_SZ>& page, */
-  /*     cas::page_nr_t page_nr); */
-
-  static void CopyToPage(cas::IdxPage<PAGE_SZ>& page,
-    size_t& offset, const void* src, size_t count);
 
   void CopyToSerializationBuffer(
       size_t& offset, const void* src, size_t count);
-
-  size_t ComputeNodeByteSize(Node& node);
 
 
   Key<VType> ProcessLine(const std::string& line, char delimiter);
