@@ -33,7 +33,14 @@ void benchmark::ExpQuerying<VType, PAGE_SZ>::Execute() {
   for (int i = 0; i < nr_repetitions_; ++i) {
     cas::util::Log("Repetition " + std::to_string(i));
     for (const auto& search_key : encoded_queries_) {
-      cas::Query<VType, PAGE_SZ> query{pager_, page_buffer_, search_key, cas::kNullEmitter};
+      /* cas::Query<VType, PAGE_SZ> query{pager_, page_buffer_, search_key, cas::kNullEmitter}; */
+      const cas::BinaryKeyEmitter emitter = [](
+          const cas::QueryBuffer& /* path */, size_t /* p_len */,
+          const cas::QueryBuffer& /* value */, size_t /* v_len */,
+          cas::ref_t ref) -> void {
+        cas::ToString(ref);
+      };
+      cas::Query<VType, PAGE_SZ> query{pager_, page_buffer_, search_key, emitter};
       query.Execute();
       results_.push_back(query.Stats());
     }
