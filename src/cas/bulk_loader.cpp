@@ -22,6 +22,7 @@ cas::BulkLoader<VType, PAGE_SZ>::BulkLoader(
   , pager_(pager)
   , context_(context)
   , shortened_key_buffer_(std::make_unique<std::array<std::byte, PAGE_SZ>>())
+  , serialization_buffer_(std::make_unique<std::array<uint8_t, 10'000'000>>())
 {
   for (int b = 0; b <= 0xFF; ++b) {
     ref_keys_[b] = std::make_unique<std::array<std::byte, PAGE_SZ>>();
@@ -47,7 +48,7 @@ void cas::BulkLoader<VType, PAGE_SZ>::Load() {
   pager_.Clear();
 
   // Initialize the root partition
-  cas::Partition<PAGE_SZ> partition(context_.input_filename_, stats_, context_);
+  cas::Partition<PAGE_SZ> partition{context_.input_filename_, stats_, context_};
   InitializeRootPartition(partition);
 
   // Compute the root's discriminative byte
@@ -84,11 +85,7 @@ void cas::BulkLoader<VType, PAGE_SZ>::Load() {
 
   // construct the index
   auto construct_start = std::chrono::high_resolution_clock::now();
-  auto root = Construct(partition, cas::Dimension::VALUE, cas::Dimension::LEAF);
-  const cas::page_nr_t root_page_nr = cas::ROOT_IDX_PAGE_NR;
-  std::deque<std::pair<std::byte, Node*>> nodes;
-  nodes.emplace_front(std::byte{0}, root.get());
-  WritePartition(nodes, root_page_nr);
+  Construct(partition, cas::Dimension::VALUE, cas::Dimension::LEAF, 0, 0);
   cas::util::AddToTimer(stats_.runtime_construction_, construct_start);
 
   cas::util::AddToTimer(stats_.runtime_, start_time_global);
@@ -162,7 +159,7 @@ std::string cas::ParseValue<std::string>(std::string& value) {
 // add all the partial keys and their references
 template<class VType, size_t PAGE_SZ>
 void cas::BulkLoader<VType, PAGE_SZ>::ConstructLeafNode(
-      std::unique_ptr<Node>& node,
+      Node& node,
       cas::Partition<PAGE_SZ>& partition) {
   auto start = std::chrono::high_resolution_clock::now();
   size_t dsc_p = partition.DscP();
@@ -189,7 +186,7 @@ void cas::BulkLoader<VType, PAGE_SZ>::ConstructLeafNode(
       std::copy(key.Value() + dsc_v, key.Value() + key.LenValue(),
           std::back_inserter(lkey.value_));
       lkey.ref_ = key.Ref();
-      node->references_.push_back(lkey);
+      node.suffixes_.push_back(lkey);
     }
     if (page.Type() != cas::MemoryPageType::INPUT) {
       mpool_.work_.Release(std::move(page));
@@ -203,12 +200,12 @@ void cas::BulkLoader<VType, PAGE_SZ>::ConstructLeafNode(
 
 
 template<class VType, size_t PAGE_SZ>
-std::unique_ptr<typename cas::BulkLoader<VType, PAGE_SZ>::Node>
-cas::BulkLoader<VType, PAGE_SZ>::Construct(
+size_t cas::BulkLoader<VType, PAGE_SZ>::Construct(
           cas::Partition<PAGE_SZ>& partition,
           cas::Dimension dimension,
           cas::Dimension par_dimension,
-          int depth) {
+          int depth,
+          size_t offset) {
 
   if (depth > 0) {
     // ignore the root partition since we determined
@@ -230,13 +227,14 @@ cas::BulkLoader<VType, PAGE_SZ>::Construct(
     cas::util::AddToTimer(stats_.runtime_dsc_computation_, start_time_dsc);
   }
 
-  auto node = std::make_unique<Node>();
+  Node node;
   size_t dsc_p = partition.DscP();
   size_t dsc_v = partition.DscV();
 
   BinaryKey key(nullptr);
-  size_t key_len_p;
-  size_t key_len_v;
+  size_t key_len_p = 0;
+  size_t key_len_v = 0;
+  size_t next_pos = offset;
 
   {
     MemoryPage<PAGE_SZ> io_page = mpool_.input_.Get();
@@ -244,8 +242,8 @@ cas::BulkLoader<VType, PAGE_SZ>::Construct(
     // make sure the page is read into io_page when NextPage is called
     cursor.FetchNextDiskPage();
     key = *(cursor.NextPage()).begin();
-    node->path_.reserve(dsc_p);
-    node->value_.reserve(dsc_v);
+    node.path_.reserve(dsc_p);
+    node.value_.reserve(dsc_v);
     key_len_p = key.LenPath();
     key_len_v = key.LenValue();
 
@@ -263,32 +261,36 @@ cas::BulkLoader<VType, PAGE_SZ>::Construct(
 
     std::copy(key.Path() + off_p,
         key.Path() + dsc_p,
-        std::back_inserter(node->path_));
+        std::back_inserter(node.path_));
     std::copy(key.Value() + off_v,
         key.Value() + dsc_v,
-        std::back_inserter(node->value_));
+        std::back_inserter(node.value_));
 
     // return io_page to the input pool
     mpool_.input_.Release(std::move(io_page));
   }
 
-  if ((context_.use_lazy_interleaving_ && partition.NrPages() == 1) ||
+
+  if ((partition.NrKeys() <= context_.partitioning_threshold_) ||
       (dsc_p >= key_len_p && dsc_v >= key_len_v)) {
+    /* std::cout << "[DEBUG] reached base case" << std::endl; */
     // stop partitioning further if
-    // - a partition contains only a single page, or
+    // - the partition contains at most \tau (partitioning threshold) keys
     // - the partition contains only one distinct key, but
     //   occupies more than one memory page. This means that
     //   this unique key must contain many duplicate references
-    node->dimension_ = cas::Dimension::LEAF;
+    node.dimension_ = cas::Dimension::LEAF;
     ConstructLeafNode(node, partition);
+    next_pos += node.ByteSize(0);
   } else {
+    /* std::cout << "[DEBUG] recursive case" << std::endl; */
     if (dimension == cas::Dimension::PATH && dsc_p >= key_len_p) {
       dimension = cas::Dimension::VALUE;
     } else if (dimension == cas::Dimension::VALUE && dsc_v >= key_len_v) {
       dimension = cas::Dimension::PATH;
     }
 
-    node->dimension_ = dimension;
+    node.dimension_ = dimension;
     PartitionTable<PAGE_SZ> table(partition_counter_, context_, stats_);
     PsiPartition(table, partition, dimension);
 
@@ -309,30 +311,32 @@ cas::BulkLoader<VType, PAGE_SZ>::Construct(
       ++dsc_v;
     }
 
+    next_pos += node.ByteSize(table.NrPartitions());
+    /* std::cout << "[DEBUG] hello world 7" <<  std::endl; */
+    /* std::cout << "[DEBUG] node_size: " << node.ByteSize(table.NrPartitions()) << std::endl; */
+    /* std::cout << "[DEBUG] next_pos: " << next_pos << std::endl; */
+
     for (int byte = 0x00; byte <= 0xFF; ++byte) {
       if (table.Exists(byte)) {
-        node->child_pointers_[byte] = Construct(table[byte],
-            dim_next, dimension, depth + 1);
-        node->child_byte_.push_back(byte);
+        node.children_pointers_.emplace_back(static_cast<std::byte>(byte), next_pos);
+        /* std::cout << "[DEBUG] T byte exists: " << byte << std::endl; */
+        next_pos = Construct(table[byte], dim_next, dimension, depth + 1, next_pos);
       }
     }
   }
 
-  // cluster the nodes in the tree on index pages
-  auto cstart = std::chrono::high_resolution_clock::now();
-  switch (context_.clustering_algorithm_) {
-    case ClusteringAlgorithm::RS:
-      PartitionTreeRS(node);
-      break;
-    case ClusteringAlgorithm::FDW:
-      PartitionTreeFDW(node);
-      break;
-    default:
-      throw std::runtime_error{"Wrong algorithm flag"};
-  }
-  cas::util::AddToTimer(stats_.runtime_clustering_, cstart);
+  // Write to disk
+  size_t node_size = SerializeNode(node);
+  pager_.Write(&serialization_buffer_->at(0), node_size, offset);
 
-  return node;
+  /* if (depth == 0) { */
+  /*   std::cout << "Write node to disk from " << offset << " to " << */
+  /*     (offset + node_size) << "\n"; */
+  /*   cas::util::DumpHexValues(&serialization_buffer_->at(0), 0, node_size); */
+  /*   std::cout << "\n"; */
+  /* } */
+
+  return next_pos;
 }
 
 
@@ -561,427 +565,269 @@ void cas::BulkLoader<VType, PAGE_SZ>::PsiPartition(
 
 
 template<class VType, size_t PAGE_SZ>
-cas::page_nr_t cas::BulkLoader<VType, PAGE_SZ>::CreateOverflowPages(Node& node) {
-  // header (has_overflow_page: 1b, overflow_page_nr: 8b, nr_keys: 2b)
-  const size_t header_size = 1 + sizeof(cas::page_nr_t) + sizeof(uint16_t);
-  auto page_nr = max_page_nr_;
-  auto first_overflow_page_nr = max_page_nr_;
-  ++max_page_nr_;
-  auto page = pager_.NewIdxPage();
-  size_t offset = header_size;
-  uint16_t cnt = 0;
-  for (const auto& leaf_key : node.references_) {
-    // header size (plen=2b, vlen=2b)
-    size_t leaf_key_size = 4;
-    leaf_key_size += leaf_key.path_.size() + leaf_key.value_.size();
-    leaf_key_size += sizeof(cas::ref_t);
-    if (offset + leaf_key_size > PAGE_SZ) {
-      // page has a continuation page
-      page->at(0) = std::byte{1};
-      size_t head_offset = 1;
-      CopyToPage(*page, head_offset, &max_page_nr_, sizeof(cas::page_nr_t));
-      CopyToPage(*page, head_offset, &cnt, sizeof(uint16_t));
-      offset = head_offset;
-      cnt = 0;
-      WritePage(*page, page_nr);
-      page_nr = max_page_nr_++;
-    }
-    uint16_t plen = static_cast<uint16_t>(leaf_key.path_.size());
-    uint16_t vlen = static_cast<uint16_t>(leaf_key.value_.size());
-    CopyToPage(*page, offset, &plen, sizeof(plen));
-    CopyToPage(*page, offset, &vlen, sizeof(vlen));
-    CopyToPage(*page, offset, &leaf_key.path_[0], plen);
-    CopyToPage(*page, offset, &leaf_key.value_[0], vlen);
-    CopyToPage(*page, offset, leaf_key.ref_.data(), sizeof(cas::ref_t));
-    ++cnt;
-  }
-  // write last page to disk
-  page->at(0) = std::byte{0};
-  size_t head_offset = 1;
-  cas::page_nr_t irrelevant = 0;
-  CopyToPage(*page, head_offset, &irrelevant, sizeof(cas::page_nr_t));
-  CopyToPage(*page, head_offset, &cnt, sizeof(uint16_t));
-  WritePage(*page, page_nr);
-  return first_overflow_page_nr;
-}
-
-
-template<class VType, size_t PAGE_SZ>
 std::string cas::BulkLoader<VType, PAGE_SZ>::getKey(int s2,int j){
     std::string key =std::to_string(s2) +"_"+ std::to_string(j);
     return key;
 }
 
 
-/**
- * This is un un-maintained implementation of the FDW algorithm
- * by Kanne et al. [VLDB'06]
- **/
+// template<class VType, size_t PAGE_SZ>
+// void cas::BulkLoader<VType, PAGE_SZ>::PartitionTreeRS(std::unique_ptr<Node>& node) {
+//   if (node->path_.size() > std::numeric_limits<uint16_t>::max()) {
+//     throw std::runtime_error{"path size exceeds uint16_t"};
+//   }
+//   if (node->value_.size() > std::numeric_limits<uint16_t>::max()) {
+//     throw std::runtime_error{"value size exceeds uint16_t"};
+//   }
+//   if (node->references_.size() > std::numeric_limits<uint32_t>::max()) {
+//     std::string msg = "number references exceeds uint32_t: "
+//       + std::to_string(node->references_.size());
+//     throw std::runtime_error{msg};
+//   }
+//
+//   std::deque<std::pair<std::byte, Node*>> partition;
+//   // child-partition header (disc-byte=1b, offset=2b)
+//   const size_t header_size = 3;
+//
+//   if (node->dimension_ == cas::Dimension::LEAF) {
+//     // heaader size (dim=1b, plen=2b, vlen=2b, rlen=4b, overflow_page=1b)
+//     node->byte_size_ = 10;
+//   } else {
+//     // heaader size (dimension=1b, plen=2b, vlen=2b, clen=2b)
+//     node->byte_size_ = 7;
+//   }
+//   // path- and value-prefix sizes
+//   node->byte_size_ += node->path_.size();
+//   node->byte_size_ += node->value_.size();
+//   // size of the references for a leaf node (>0 if node is a leaf)
+//   size_t ref_bytes = 0;
+//   for (const auto& leaf_key : node->references_) {
+//     // header size (plen=2b, vlen=2b)
+//     ref_bytes += 4;
+//     ref_bytes += leaf_key.path_.size() + leaf_key.value_.size();
+//     ref_bytes += sizeof(cas::ref_t);
+//   }
+//   node->byte_size_ += ref_bytes;
+//   // so far only the node itself is in the same page
+//   node->nr_descendants_in_same_page_ = 1;
+//
+//   // handle very big leaf nodes (try to create an overflow page)
+//   if (header_size + node->byte_size_ > PAGE_SZ-1) {
+//     assert(node->dimension_ == cas::Dimension::LEAF);
+//     const size_t overflow_ptr_size = 8;
+//     size_t overflow_node_size = header_size
+//       + node->byte_size_ - ref_bytes + overflow_ptr_size;
+//     if (overflow_node_size <= PAGE_SZ-1) {
+//       // the node is a leaf that must be split into a number
+//       // of overflow pages
+//       node->overflow_page_nr_ = CreateOverflowPages(*node);
+//       node->byte_size_ -= ref_bytes;
+//       node->byte_size_ += overflow_ptr_size;
+//       node->has_overflow_page_ = true;
+//     } else {
+//       throw std::runtime_error{"single node does not fit on disk page"};
+//     }
+//   }
+//
+//   size_t bytes_header = 0;
+//   size_t bytes_content = 0;
+//   for (int byte = 0xFF; byte >= 0x00; --byte) {
+//     const auto& child = node->child_pointers_[byte];
+//     if (child == nullptr) {
+//       continue;
+//     }
+//     if (bytes_header + header_size + bytes_content + child->byte_size_ > PAGE_SZ-1) {
+//       // write partition to a page
+//       cas::page_nr_t page_nr = (max_page_nr_++);
+//       WritePartition(partition, page_nr);
+//       node->child_pages_.emplace_front(
+//           std::get<0>(partition.front()),
+//           std::get<0>(partition.back()),
+//           page_nr);
+//       node->nr_interpage_pointers_ += partition.size();
+//       node->nr_interpage_pages_ += 1;
+//       // free memory for nodes
+//       for (int i = static_cast<int>(std::get<0>(partition.front()));
+//            i <= static_cast<int>(std::get<0>(partition.back()));
+//            ++i) {
+//         node->child_pointers_[i] = nullptr;
+//       }
+//       partition.clear();
+//       // the new partition is now empty, reset counters
+//       bytes_header = 0;
+//       bytes_content = 0;
+//       // inter-page pointers from parent to page (type=1b, disc-byte-range=2b, page_nr=8b)
+//       node->byte_size_ += 11;
+//     }
+//     bytes_header += header_size;
+//     bytes_content += child->byte_size_;
+//     partition.emplace_front(static_cast<std::byte>(byte), child.get());
+//   }
+//
+//
+//   // intra-page pointers (type=1b, disc-byte=1b, offset=2b)
+//   size_t bytes_ptrs = 4*partition.size();
+//   size_t node_header = 3;
+//   if (node_header + node->byte_size_ + bytes_content + bytes_ptrs > PAGE_SZ-1) {
+//     // parent is put in its own new page, remaining children are put in own page
+//     cas::page_nr_t page_nr = (max_page_nr_++);
+//     WritePartition(partition, page_nr);
+//     node->child_pages_.emplace_front(
+//         std::get<0>(partition.front()),
+//         std::get<0>(partition.back()),
+//         page_nr);
+//     node->nr_interpage_pointers_ += partition.size();
+//     node->nr_interpage_pages_ += 1;
+//     // free memory for nodes
+//     for (auto i = static_cast<int>(std::get<0>(partition.front()));
+//          i <= static_cast<int>(std::get<0>(partition.back()));
+//          ++i) {
+//       node->child_pointers_[i] = nullptr;
+//     }
+//     partition.clear();
+//     // the new partition is now empty, reset counters
+//     bytes_header = 0;
+//     bytes_content = 0;
+//     // inter-page pointers from parent to page (type=1b, disc-byte-range=2b, pagenr=8b)
+//     node->byte_size_ += 11;
+//   } else {
+//     // parent fits with all remaining children in one page
+//     node->byte_size_ += bytes_content;
+//     node->byte_size_ += bytes_ptrs;
+//     // accumulate the statistics from the children in their parent
+//     for (const auto& [_,child] : partition) {
+//       node->nr_interpage_pointers_ += child->nr_interpage_pointers_;
+//       node->nr_interpage_pages_ += child->nr_interpage_pages_;
+//       node->nr_descendants_in_same_page_ += child->nr_descendants_in_same_page_;
+//     }
+//   }
+// }
+
+// template<class VType, size_t PAGE_SZ>
+// size_t cas::BulkLoader<VType, PAGE_SZ>::WritePartition(
+//     std::deque<std::pair<std::byte, Node*>> nodes,
+//     cas::page_nr_t page_nr) {
+//   auto page = pager_.NewIdxPage();
+//   // the partition_size can be at most 256, which does not fit into
+//   // uint8_t, therefore we wrap around and set it to 0 if the
+//   // partition_size is 256
+//   auto partition_size = static_cast<uint8_t>(nodes.size());
+//   if (nodes.size() == 256) {
+//     partition_size = 0;
+//   }
+//   const size_t node_header = 3;
+//   size_t offset_header = 0;
+//   size_t offset_payload = 1 + (node_header * nodes.size());
+//   CopyToPage(*page, offset_header, &partition_size, sizeof(uint8_t));
+//   for (auto& pair : nodes) {
+//     auto disc_byte = std::get<0>(pair);
+//     auto* node = std::get<1>(pair);
+//     auto address = static_cast<uint16_t>(offset_payload);
+//     CopyToPage(*page, offset_header, &disc_byte, sizeof(uint8_t));
+//     CopyToPage(*page, offset_header, &address, sizeof(uint16_t));
+//     offset_payload = SerializePartitionToPage(*node, *page, offset_payload);
+//   }
+//   WritePage(*page, page_nr);
+//   return offset_payload;
+// }
+
+
+// template<class VType, size_t PAGE_SZ>
+// void cas::BulkLoader<VType, PAGE_SZ>::WritePage(
+//       const cas::IdxPage<PAGE_SZ>& page,
+//       cas::page_nr_t page_nr) {
+//   auto start = std::chrono::high_resolution_clock::now();
+//   pager_.Write(page, page_nr);
+//   stats_.index_bytes_written_ += PAGE_SZ;
+//   cas::util::AddToTimer(stats_.runtime_clustering_disk_write_, start);
+// }
+
+
 template<class VType, size_t PAGE_SZ>
-void cas::BulkLoader<VType, PAGE_SZ>::PartitionTreeFDW(std::unique_ptr<Node>& node) {
-    std::deque<std::pair<std::byte, Node*>> partition;
+size_t cas::BulkLoader<VType, PAGE_SZ>::SerializeNode(Node& node) {
+  auto& buffer = *serialization_buffer_.get();
 
-  if (node->dimension_ == cas::Dimension::LEAF) {
-    // heaader size (dim=1b, plen=2b, vlen=2b, rlen=4b, overflow_page=1b)
-    node->byte_size_ = 10;
+  // check bounds
+  if (node.path_.size() > std::numeric_limits<uint8_t>::max()) {
+    throw std::runtime_error{"path size exceeds uint8_t"};
+  }
+  if (node.value_.size() > std::numeric_limits<uint8_t>::max()) {
+    throw std::runtime_error{"value size exceeds uint8_t"};
+  }
+  if (node.suffixes_.size() > std::numeric_limits<uint16_t>::max()) {
+    throw std::runtime_error{"number of suffixes exceeds uint16_t"};
+  }
+  if (node.ByteSize(node.children_pointers_.size()) > buffer.size()) {
+    throw std::runtime_error{"node exceeds buffer size"};
+  }
+
+  // determine nr children/suffixes
+  uint16_t m = node.IsLeaf()
+    ? static_cast<uint16_t>(node.suffixes_.size())
+    : static_cast<uint16_t>(node.children_pointers_.size());
+
+  // serialize header
+  size_t offset = 0;
+
+  buffer[offset++] = static_cast<uint8_t>(node.dimension_);
+  buffer[offset++] = static_cast<uint8_t>(node.path_.size());;
+  buffer[offset++] = static_cast<uint8_t>(node.value_.size());
+  CopyToSerializationBuffer(offset, &m, sizeof(uint16_t));
+  CopyToSerializationBuffer(offset, &node.path_[0], node.path_.size());
+  CopyToSerializationBuffer(offset, &node.value_[0], node.value_.size());
+
+  if (node.IsLeaf()) {
+    // serialize suffixes
+    for (const auto& suffix : node.suffixes_) {
+      if (suffix.path_.size() > std::numeric_limits<uint8_t>::max()) {
+        throw std::runtime_error{"path size exceeds uint8_t"};
+      }
+      if (suffix.value_.size() > std::numeric_limits<uint8_t>::max()) {
+        throw std::runtime_error{"value size exceeds uint8_t"};
+      }
+      buffer[offset++] = static_cast<uint8_t>(suffix.path_.size());
+      buffer[offset++] = static_cast<uint8_t>(suffix.value_.size());
+      CopyToSerializationBuffer(offset, &suffix.path_[0], suffix.path_.size());
+      CopyToSerializationBuffer(offset, &suffix.value_[0], suffix.value_.size());
+      CopyToSerializationBuffer(offset, &suffix.ref_[0], suffix.ref_.size());
+    }
   } else {
-    // heaader size (dimension=1b, plen=2b, vlen=2b, clen=2b)
-    node->byte_size_ = 7;
-  }
-
-  // path- and value-prefix sizes
-  node->byte_size_ += node->path_.size();
-  node->byte_size_ += node->value_.size();
-  // size of references (>0 if node is a leaf)
-  node->byte_size_ += (node->references_.size() * sizeof(cas::ref_t));
-  node->byte_size_ += (node->child_byte_.size() * 11); //assume all children with interpointer
-  node->byte_size_ += 3; //page header
-
-  // handle very big nodes (try to create an overflow page)
-  if (node->byte_size_ > PAGE_SZ-1) {
-    const size_t overflow_ptr_size = 8;
-    size_t overflow_node_size = node->byte_size_ - (node->references_.size() * sizeof(cas::ref_t)) + overflow_ptr_size;
-
-    if (node->dimension_ == cas::Dimension::LEAF &&
-        overflow_node_size <= PAGE_SZ-1) {
-      // the node is a leaf that must be split into a number
-      // of overflow pages
-      node->overflow_page_nr_ = CreateOverflowPages(*node);
-      node->byte_size_ -= (node->references_.size() * sizeof(cas::ref_t));
-      node->byte_size_ += overflow_ptr_size;
-      node->has_overflow_page_ = true;
-    } else {
-      throw std::runtime_error{"single node does not fit on disk page"};
-    }
-  }
-
-
-  std::unordered_map<std::string, dtable_t> tables;
-
-  for(size_t rw=node->byte_size_; rw<=(PAGE_SZ-1);rw++){
-    std::string key = std::to_string(rw) +"_0";
-    dtable_t &curTab = tables[key];
-    curTab.begin="a";
-    curTab.begin_idx=0;
-    curTab.end="a";
-    curTab.end_idx=0;
-    curTab.card=1;
-    curTab.rw=rw;
-  }
-
-  for(size_t j=1;j<=node->child_byte_.size();j++){
-    for(size_t s=node->byte_size_;s<=(PAGE_SZ-1);s++){
-      size_t s2 = s+node->child_pointers_[node->child_byte_[(j-1)]]->byte_size_-3+4-11; // (-header of child) (+intra pointer) (-interpointer)
-      size_t w=0,m=0;
-      bool out_of_bound;
-      if((s2)>(PAGE_SZ-1)){
-        out_of_bound = true;
+    // serialize child pointers
+    for (const auto& [byte, ptr] : node.children_pointers_) {
+      constexpr size_t limit = 1ul<<48ul; // 6 byte range
+      if (ptr >= limit) {
+        throw std::runtime_error{"pointer size exceeds 2**48"};
       }
-      else{
-        out_of_bound = false;
-        if(tables.find(getKey(s2,j-1))==tables.end()){
-          std::cout <<"Entry not found: " << getKey(s2,j-1)<<std::endl;
-        }
-        tables[getKey(s,j)] = tables[getKey(s2,j-1)];
-      }
-
-      while(m<j && m<=(PAGE_SZ-1) && w <= (PAGE_SZ-1)){
-        w = w+ node->child_pointers_[node->child_byte_[(j-1-m)]]->byte_size_;
-        if(w<=(PAGE_SZ-1)){
-          if(tables.find(getKey(s,j-m-1))==tables.end()){
-            std::cout <<"Entry not found: "<< getKey(s, j-m-1) <<std::endl;
-          }
-          dtable_t d = tables[getKey(s,j-m-1)];
-          int crd = d.card+1;
-          int rw = d.rw;
-          if(out_of_bound || crd < tables[getKey(s,j)].card || (crd == tables[getKey(s,j)].card && rw < tables[getKey(s,j)].rw)){
-            tables[getKey(s,j)].begin = std::to_string(node->child_byte_.at(j-1-m));
-            tables[getKey(s,j)].begin_idx = j-m;
-            tables[getKey(s,j)].end = std::to_string(node->child_byte_.at(j-1));
-            tables[getKey(s,j)].end_idx = j;
-            tables[getKey(s,j)].card = crd;
-            tables[getKey(s,j)].rw=rw;
-            tables[getKey(s,j)].nextKey=getKey(s,j-m-1);
-            out_of_bound = false;
-          }
-        }
-        m++;
-      }
+      buffer[offset++] = static_cast<uint8_t>(byte);
+      buffer[offset++] = static_cast<uint8_t>((ptr >> 40) & 0xFF);
+      buffer[offset++] = static_cast<uint8_t>((ptr >> 32) & 0xFF);
+      buffer[offset++] = static_cast<uint8_t>((ptr >> 24) & 0xFF);
+      buffer[offset++] = static_cast<uint8_t>((ptr >> 16) & 0xFF);
+      buffer[offset++] = static_cast<uint8_t>((ptr >>  8) & 0xFF);
+      buffer[offset++] = static_cast<uint8_t>((ptr >>  0) & 0xFF);
     }
   }
 
-  std::vector<int> nodes_done; //index of nodes which are in a partition which is not the root partition
-  dtable_t* k = &tables[std::to_string(node->byte_size_) +"_"+ std::to_string(node->child_byte_.size())];
-
-  while(k->begin_idx!=0){
-    node->byte_size_+=11; // add the interpagepointer
-    for(int j=k->begin_idx; j<=k->end_idx; j++){
-      nodes_done.push_back(j);
-      node->byte_size_-=11; // subtract the worst case interpointer
-      partition.emplace_back(static_cast<std::byte>(node->child_byte_[j-1]), node->child_pointers_[node->child_byte_[j-1]].get());
-    }
-
-    cas::page_nr_t page_nr = (max_page_nr_++);
-    WritePartition(partition, page_nr);
-    node->child_pages_.emplace_front(
-        std::get<0>(partition.front()),
-        std::get<0>(partition.back()),
-        page_nr);
-    // free memory for nodes
-    for (int i = static_cast<int>(std::get<0>(partition.front()));
-        i <= static_cast<int>(std::get<0>(partition.back()));
-        ++i) {
-      node->child_pointers_[i] = nullptr;
-    }
-    partition.clear();
-    // the new partition is now empty
-
-    k = &tables[k->nextKey];
+  // validation
+  if (offset != node.ByteSize(node.children_pointers_.size())) {
+    /* std::cout << "[DEBUG] serial_size: " << offset << "\n"; */
+    /* std::cout << "[DEBUG] node_size: " << node.ByteSize(node.children_pointers_.size()) << "\n"; */
+    throw std::runtime_error{"serialization size does not match expected size"};
   }
 
-  size_t bytes_content = 0;
-  for(size_t j=1; j<=node->child_byte_.size(); j++){
-    if(std::find(nodes_done.begin(), nodes_done.end(), j) == nodes_done.end()){
-      //std::cout << std::to_string(node->child_byte_[j-1]) + " "<< std::endl;
-      bytes_content += node->child_pointers_[node->child_byte_[j-1]]->byte_size_-10; //correction -3-11+4
-    }
-  }
-  node->byte_size_ += bytes_content;
+  return offset;
 }
 
 
 template<class VType, size_t PAGE_SZ>
-void cas::BulkLoader<VType, PAGE_SZ>::PartitionTreeRS(std::unique_ptr<Node>& node) {
-  if (node->path_.size() > std::numeric_limits<uint16_t>::max()) {
-    throw std::runtime_error{"path size exceeds uint16_t"};
-  }
-  if (node->value_.size() > std::numeric_limits<uint16_t>::max()) {
-    throw std::runtime_error{"value size exceeds uint16_t"};
-  }
-  if (node->references_.size() > std::numeric_limits<uint32_t>::max()) {
-    std::string msg = "number references exceeds uint32_t: "
-      + std::to_string(node->references_.size());
-    throw std::runtime_error{msg};
-  }
-
-  std::deque<std::pair<std::byte, Node*>> partition;
-  // child-partition header (disc-byte=1b, offset=2b)
-  const size_t header_size = 3;
-
-  if (node->dimension_ == cas::Dimension::LEAF) {
-    // heaader size (dim=1b, plen=2b, vlen=2b, rlen=4b, overflow_page=1b)
-    node->byte_size_ = 10;
-  } else {
-    // heaader size (dimension=1b, plen=2b, vlen=2b, clen=2b)
-    node->byte_size_ = 7;
-  }
-  // path- and value-prefix sizes
-  node->byte_size_ += node->path_.size();
-  node->byte_size_ += node->value_.size();
-  // size of the references for a leaf node (>0 if node is a leaf)
-  size_t ref_bytes = 0;
-  for (const auto& leaf_key : node->references_) {
-    // header size (plen=2b, vlen=2b)
-    ref_bytes += 4;
-    ref_bytes += leaf_key.path_.size() + leaf_key.value_.size();
-    ref_bytes += sizeof(cas::ref_t);
-  }
-  node->byte_size_ += ref_bytes;
-  // so far only the node itself is in the same page
-  node->nr_descendants_in_same_page_ = 1;
-
-  // handle very big leaf nodes (try to create an overflow page)
-  if (header_size + node->byte_size_ > PAGE_SZ-1) {
-    assert(node->dimension_ == cas::Dimension::LEAF);
-    const size_t overflow_ptr_size = 8;
-    size_t overflow_node_size = header_size
-      + node->byte_size_ - ref_bytes + overflow_ptr_size;
-    if (overflow_node_size <= PAGE_SZ-1) {
-      // the node is a leaf that must be split into a number
-      // of overflow pages
-      node->overflow_page_nr_ = CreateOverflowPages(*node);
-      node->byte_size_ -= ref_bytes;
-      node->byte_size_ += overflow_ptr_size;
-      node->has_overflow_page_ = true;
-    } else {
-      throw std::runtime_error{"single node does not fit on disk page"};
-    }
-  }
-
-  size_t bytes_header = 0;
-  size_t bytes_content = 0;
-  for (int byte = 0xFF; byte >= 0x00; --byte) {
-    const auto& child = node->child_pointers_[byte];
-    if (child == nullptr) {
-      continue;
-    }
-    if (bytes_header + header_size + bytes_content + child->byte_size_ > PAGE_SZ-1) {
-      // write partition to a page
-      cas::page_nr_t page_nr = (max_page_nr_++);
-      WritePartition(partition, page_nr);
-      node->child_pages_.emplace_front(
-          std::get<0>(partition.front()),
-          std::get<0>(partition.back()),
-          page_nr);
-      node->nr_interpage_pointers_ += partition.size();
-      node->nr_interpage_pages_ += 1;
-      // free memory for nodes
-      for (int i = static_cast<int>(std::get<0>(partition.front()));
-           i <= static_cast<int>(std::get<0>(partition.back()));
-           ++i) {
-        node->child_pointers_[i] = nullptr;
-      }
-      partition.clear();
-      // the new partition is now empty, reset counters
-      bytes_header = 0;
-      bytes_content = 0;
-      // inter-page pointers from parent to page (type=1b, disc-byte-range=2b, page_nr=8b)
-      node->byte_size_ += 11;
-    }
-    bytes_header += header_size;
-    bytes_content += child->byte_size_;
-    partition.emplace_front(static_cast<std::byte>(byte), child.get());
-  }
-
-
-  // intra-page pointers (type=1b, disc-byte=1b, offset=2b)
-  size_t bytes_ptrs = 4*partition.size();
-  size_t node_header = 3;
-  if (node_header + node->byte_size_ + bytes_content + bytes_ptrs > PAGE_SZ-1) {
-    // parent is put in its own new page, remaining children are put in own page
-    cas::page_nr_t page_nr = (max_page_nr_++);
-    WritePartition(partition, page_nr);
-    node->child_pages_.emplace_front(
-        std::get<0>(partition.front()),
-        std::get<0>(partition.back()),
-        page_nr);
-    node->nr_interpage_pointers_ += partition.size();
-    node->nr_interpage_pages_ += 1;
-    // free memory for nodes
-    for (auto i = static_cast<int>(std::get<0>(partition.front()));
-         i <= static_cast<int>(std::get<0>(partition.back()));
-         ++i) {
-      node->child_pointers_[i] = nullptr;
-    }
-    partition.clear();
-    // the new partition is now empty, reset counters
-    bytes_header = 0;
-    bytes_content = 0;
-    // inter-page pointers from parent to page (type=1b, disc-byte-range=2b, pagenr=8b)
-    node->byte_size_ += 11;
-  } else {
-    // parent fits with all remaining children in one page
-    node->byte_size_ += bytes_content;
-    node->byte_size_ += bytes_ptrs;
-    // accumulate the statistics from the children in their parent
-    for (const auto& [_,child] : partition) {
-      node->nr_interpage_pointers_ += child->nr_interpage_pointers_;
-      node->nr_interpage_pages_ += child->nr_interpage_pages_;
-      node->nr_descendants_in_same_page_ += child->nr_descendants_in_same_page_;
-    }
-  }
-}
-
-
-
-template<class VType, size_t PAGE_SZ>
-void cas::BulkLoader<VType, PAGE_SZ>::CopyToPage(
-    cas::IdxPage<PAGE_SZ>& page,
+void cas::BulkLoader<VType, PAGE_SZ>::CopyToSerializationBuffer(
     size_t& offset, const void* src, size_t count) {
-  if (offset + count > page.size()) {
-    auto msg = "page address violation: " + std::to_string(offset+count);
+  if (offset + count > serialization_buffer_->size()) {
+    auto msg = "address violation: " + std::to_string(offset+count);
     throw std::out_of_range{msg};
   }
-  std::memcpy(page.begin()+offset, src, count);
+  std::memcpy(serialization_buffer_->begin()+offset, src, count);
   offset += count;
-}
-
-
-template<class VType, size_t PAGE_SZ>
-size_t cas::BulkLoader<VType, PAGE_SZ>::WritePartition(
-    std::deque<std::pair<std::byte, Node*>> nodes,
-    cas::page_nr_t page_nr) {
-  auto page = pager_.NewIdxPage();
-  // the partition_size can be at most 256, which does not fit into
-  // uint8_t, therefore we wrap around and set it to 0 if the
-  // partition_size is 256
-  auto partition_size = static_cast<uint8_t>(nodes.size());
-  if (nodes.size() == 256) {
-    partition_size = 0;
-  }
-  const size_t node_header = 3;
-  size_t offset_header = 0;
-  size_t offset_payload = 1 + (node_header * nodes.size());
-  CopyToPage(*page, offset_header, &partition_size, sizeof(uint8_t));
-  for (auto& pair : nodes) {
-    auto disc_byte = std::get<0>(pair);
-    auto* node = std::get<1>(pair);
-    auto address = static_cast<uint16_t>(offset_payload);
-    CopyToPage(*page, offset_header, &disc_byte, sizeof(uint8_t));
-    CopyToPage(*page, offset_header, &address, sizeof(uint16_t));
-    offset_payload = SerializePartitionToPage(*node, *page, offset_payload);
-  }
-  WritePage(*page, page_nr);
-  if (context_.compute_page_utilization_) {
-    stats_.page_utilization_.Record(offset_payload);
-  }
-  if (context_.compute_fanout_) {
-    size_t sum_ptrs = 0;
-    size_t sum_pages = 0;
-    for (const auto& [_,node] : nodes) {
-      sum_ptrs += node->nr_interpage_pointers_;
-      sum_pages += node->nr_interpage_pages_;
-    }
-    if (sum_ptrs > 0) {
-      stats_.page_fanout_ptrs_.Record(sum_ptrs);
-    }
-    if (sum_pages > 0) {
-      stats_.page_fanout_pages_.Record(sum_pages);
-    }
-  }
-  if (context_.compute_nodes_per_page_) {
-    size_t sum = 0;
-    for (const auto& [_,node] : nodes) {
-      sum += node->nr_descendants_in_same_page_;
-    }
-    stats_.nodes_per_page_.Record(sum);
-  }
-  return offset_payload;
-}
-
-
-template<class VType, size_t PAGE_SZ>
-bool cas::BulkLoader<VType, PAGE_SZ>::ContainsLeafNode(
-    const std::deque<std::pair<std::byte, Node*>>& nodes)
-{
-  std::deque<Node*> stack;
-  for (const auto& [_,node] : nodes) {
-    stack.push_back(node);
-  }
-  while (!stack.empty()) {
-    auto node = stack.back();
-    stack.pop_back();
-    if (node->dimension_ == cas::Dimension::LEAF) {
-      return true;
-    }
-    for (int i = 0; i <= 0xFF; ++i) {
-      if (node->child_pointers_[i] != nullptr) {
-        stack.push_back(node->child_pointers_[i].get());
-      }
-    }
-  }
-  return false;
-}
-
-
-template<class VType, size_t PAGE_SZ>
-void cas::BulkLoader<VType, PAGE_SZ>::WritePage(
-      const cas::IdxPage<PAGE_SZ>& page,
-      cas::page_nr_t page_nr) {
-  auto start = std::chrono::high_resolution_clock::now();
-  pager_.Write(page, page_nr);
-  stats_.index_bytes_written_ += PAGE_SZ;
-  cas::util::AddToTimer(stats_.runtime_clustering_disk_write_, start);
 }
 
 
@@ -992,97 +838,125 @@ size_t cas::BulkLoader<VType, PAGE_SZ>::SerializePartitionToPage(
     cas::IdxPage<PAGE_SZ>& page,
     size_t offset) {
 
-  auto plen = static_cast<uint16_t>(node.path_.size());
-  auto vlen = static_cast<uint16_t>(node.value_.size());
-  uint32_t rlen = static_cast<uint32_t>(node.references_.size());
+  // TODO
 
-  // count number of children
-  uint16_t clen = 0;
-  if (node.dimension_ != cas::Dimension::LEAF) {
-    clen += node.child_pages_.size();
-    for (size_t byte = 0x00; byte <= 0xFF; ++byte) {
-      if (node.child_pointers_[byte] != nullptr) {
-        ++clen;
-      }
-    }
-  }
+  // auto plen = static_cast<uint16_t>(node.path_.size());
+  // auto vlen = static_cast<uint16_t>(node.value_.size());
+  // uint32_t rlen = static_cast<uint32_t>(node.references_.size());
 
-  // copy common header
-  page.at(offset) = static_cast<std::byte>(node.dimension_);
-  ++offset;
-  CopyToPage(page, offset, &plen, sizeof(plen));
-  CopyToPage(page, offset, &vlen, sizeof(vlen));
+  // // count number of children
+  // uint16_t clen = 0;
+  // if (node.dimension_ != cas::Dimension::LEAF) {
+  //   clen += node.child_pages_.size();
+  //   for (size_t byte = 0x00; byte <= 0xFF; ++byte) {
+  //     if (node.child_pointers_[byte] != nullptr) {
+  //       ++clen;
+  //     }
+  //   }
+  // }
 
-  // copy node-type specific header
-  if (node.dimension_ == cas::Dimension::LEAF) {
-    // leaf node has references
-    CopyToPage(page, offset, &rlen, sizeof(rlen));
-    page.at(offset) = node.has_overflow_page_ ? std::byte{1} : std::byte{0};
-    ++offset;
-  } else {
-    // inner node has children
-    CopyToPage(page, offset, &clen, sizeof(clen));
-  }
+  // // copy common header
+  // page.at(offset) = static_cast<std::byte>(node.dimension_);
+  // ++offset;
+  // CopyToPage(page, offset, &plen, sizeof(plen));
+  // CopyToPage(page, offset, &vlen, sizeof(vlen));
 
-  // copy prefixes
-  CopyToPage(page, offset, &node.path_[0], plen);
-  CopyToPage(page, offset, &node.value_[0], vlen);
+  // // copy node-type specific header
+  // if (node.dimension_ == cas::Dimension::LEAF) {
+  //   // leaf node has references
+  //   CopyToPage(page, offset, &rlen, sizeof(rlen));
+  //   page.at(offset) = node.has_overflow_page_ ? std::byte{1} : std::byte{0};
+  //   ++offset;
+  // } else {
+  //   // inner node has children
+  //   CopyToPage(page, offset, &clen, sizeof(clen));
+  // }
 
-  // copy references
-  if (node.dimension_ == cas::Dimension::LEAF) {
-    if (node.has_overflow_page_) {
-      CopyToPage(page, offset, &node.overflow_page_nr_, sizeof(cas::page_nr_t));
-    } else {
-      for (const auto& leaf_key : node.references_) {
-        auto lk_plen = static_cast<uint16_t>(leaf_key.path_.size());
-        auto lk_vlen = static_cast<uint16_t>(leaf_key.value_.size());
-        CopyToPage(page, offset, &lk_plen, sizeof(lk_plen));
-        CopyToPage(page, offset, &lk_vlen, sizeof(lk_vlen));
-        CopyToPage(page, offset, &leaf_key.path_[0], lk_plen);
-        CopyToPage(page, offset, &leaf_key.value_[0], lk_vlen);
-        CopyToPage(page, offset, leaf_key.ref_.data(), sizeof(cas::ref_t));
-      }
-    }
-    return offset;
-  }
+  // // copy prefixes
+  // CopyToPage(page, offset, &node.path_[0], plen);
+  // CopyToPage(page, offset, &node.value_[0], vlen);
 
-  // compute and skip space needed for child pointers
-  size_t offset_children = offset;
-  for (size_t byte = 0x00; byte <= 0xFF; ++byte) {
-    if (node.child_pointers_[byte]) {
-      offset += 2 + sizeof(uint16_t);
-    }
-  }
-  // type=1b, disc-byte-range=2b, pagenr=8b
-  const size_t bytes_pageref = 1+2+8;
-  offset += node.child_pages_.size() * bytes_pageref;
+  // // copy references
+  // if (node.dimension_ == cas::Dimension::LEAF) {
+  //   if (node.has_overflow_page_) {
+  //     CopyToPage(page, offset, &node.overflow_page_nr_, sizeof(cas::page_nr_t));
+  //   } else {
+  //     for (const auto& leaf_key : node.references_) {
+  //       auto lk_plen = static_cast<uint16_t>(leaf_key.path_.size());
+  //       auto lk_vlen = static_cast<uint16_t>(leaf_key.value_.size());
+  //       CopyToPage(page, offset, &lk_plen, sizeof(lk_plen));
+  //       CopyToPage(page, offset, &lk_vlen, sizeof(lk_vlen));
+  //       CopyToPage(page, offset, &leaf_key.path_[0], lk_plen);
+  //       CopyToPage(page, offset, &leaf_key.value_[0], lk_vlen);
+  //       CopyToPage(page, offset, leaf_key.ref_.data(), sizeof(cas::ref_t));
+  //     }
+  //   }
+  //   return offset;
+  // }
 
-  // write child pointers & children
-  for (size_t byte = 0x00; byte <= 0xFF; ++byte) {
-    if (node.child_pointers_[byte]) {
-      uint8_t type = 1;
-      auto val = static_cast<uint8_t>(byte);
-      auto address = static_cast<uint16_t>(offset);
-      offset = SerializePartitionToPage(*node.child_pointers_[byte], page, offset);
-      CopyToPage(page, offset_children, &type, sizeof(type));
-      CopyToPage(page, offset_children, &val, sizeof(val));
-      CopyToPage(page, offset_children, &address, sizeof(uint16_t));
-    }
-  }
+  // // compute and skip space needed for child pointers
+  // size_t offset_children = offset;
+  // for (size_t byte = 0x00; byte <= 0xFF; ++byte) {
+  //   if (node.child_pointers_[byte]) {
+  //     offset += 2 + sizeof(uint16_t);
+  //   }
+  // }
+  // // type=1b, disc-byte-range=2b, pagenr=8b
+  // const size_t bytes_pageref = 1+2+8;
+  // offset += node.child_pages_.size() * bytes_pageref;
 
-  // write child page pointers
-  for (auto& tuple : node.child_pages_) {
-    uint8_t type  = 0;
-    auto vlow  = static_cast<uint8_t>(std::get<0>(tuple));
-    auto vhigh = static_cast<uint8_t>(std::get<1>(tuple));
-    auto& page_nr = std::get<2>(tuple);
-    CopyToPage(page, offset_children, &type, sizeof(type));
-    CopyToPage(page, offset_children, &vlow, sizeof(vlow));
-    CopyToPage(page, offset_children, &vhigh, sizeof(vhigh));
-    CopyToPage(page, offset_children, &page_nr, sizeof(cas::page_nr_t));
-  }
+  // // write child pointers & children
+  // for (size_t byte = 0x00; byte <= 0xFF; ++byte) {
+  //   if (node.child_pointers_[byte]) {
+  //     uint8_t type = 1;
+  //     auto val = static_cast<uint8_t>(byte);
+  //     auto address = static_cast<uint16_t>(offset);
+  //     offset = SerializePartitionToPage(*node.child_pointers_[byte], page, offset);
+  //     CopyToPage(page, offset_children, &type, sizeof(type));
+  //     CopyToPage(page, offset_children, &val, sizeof(val));
+  //     CopyToPage(page, offset_children, &address, sizeof(uint16_t));
+  //   }
+  // }
+
+  // // write child page pointers
+  // for (auto& tuple : node.child_pages_) {
+  //   uint8_t type  = 0;
+  //   auto vlow  = static_cast<uint8_t>(std::get<0>(tuple));
+  //   auto vhigh = static_cast<uint8_t>(std::get<1>(tuple));
+  //   auto& page_nr = std::get<2>(tuple);
+  //   CopyToPage(page, offset_children, &type, sizeof(type));
+  //   CopyToPage(page, offset_children, &vlow, sizeof(vlow));
+  //   CopyToPage(page, offset_children, &vhigh, sizeof(vhigh));
+  //   CopyToPage(page, offset_children, &page_nr, sizeof(cas::page_nr_t));
+  // }
 
   return offset;
+}
+
+
+template<class VType, size_t PAGE_SZ>
+size_t cas::BulkLoader<VType, PAGE_SZ>::Node::ByteSize(int nr_children) const {
+  size_t size = 0;
+  // header (dimension:1B, l_P:1B, l_V:1B, m:2B)
+  size += 5;
+  // lenghts of substrings
+  size += path_.size();
+  size += value_.size();
+  // payload
+  if (IsLeaf()) {
+    for (const MemoryKey& suffix : suffixes_) {
+      // header (l_P:1B, l_V:1B)
+      size += 2;
+      // lenghts of substrings
+      size += suffix.path_.size();
+      size += suffix.value_.size();
+      size += suffix.ref_.size();
+    }
+  } else {
+    // per child => b:1, ptr: 6
+    size += (7 * nr_children);
+  }
+  return size;
 }
 
 
@@ -1107,9 +981,8 @@ void cas::BulkLoader<VType, PAGE_SZ>::Node::Dump() const {
   std::cout << "\nvalue_: ";
   std::cout << "(len=" << value_.size() << ") ";
   cas::util::DumpHexValues(value_);
-  std::cout << "\nbyte_size_: " << byte_size_;
+  std::cout << "\nbyte_size_: " << ByteSize(children_pointers_.size());
   std::cout << "\n";
-
 }
 
 

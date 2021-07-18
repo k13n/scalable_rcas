@@ -38,6 +38,8 @@ public:
 
   void Write(const IdxPage<PAGE_SZ>& page, cas::page_nr_t page_nr);
 
+  void Write(uint8_t* src, size_t size, size_t offset);
+
 private:
   void OpenFile();
   void CloseFile();

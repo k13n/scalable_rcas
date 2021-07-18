@@ -35,6 +35,7 @@ cas::MemoryPage<PAGE_SZ> cas::Partition<PAGE_SZ>::PopFromMemory() {
 template<size_t PAGE_SZ>
 void cas::Partition<PAGE_SZ>::PushToMemory(
     cas::MemoryPage<PAGE_SZ>&& page) {
+  nr_keys_ += page.NrKeys();
   ++nr_memory_pages_;
   mptr_.push_front(std::move(page));
 }
@@ -43,6 +44,7 @@ void cas::Partition<PAGE_SZ>::PushToMemory(
 template<size_t PAGE_SZ>
 void cas::Partition<PAGE_SZ>::PushToDisk(
     const MemoryPage<PAGE_SZ>& page) {
+  nr_keys_ += page.NrKeys();
   ++nr_disk_pages_;
   if (fptr_ == -1) {
     OpenFile();

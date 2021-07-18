@@ -24,6 +24,10 @@ void cas::util::DumpHexValues(const std::byte* buffer, size_t size) {
   DumpHexValues(buffer, 0, size);
 }
 
+void cas::util::DumpHexValues(const uint8_t* buffer, size_t offset, size_t size) {
+  DumpHexValues(reinterpret_cast<const std::byte*>(buffer), offset, size);
+}
+
 void cas::util::DumpHexValues(const std::byte* buffer,
     size_t offset, size_t size) {
   for (size_t i = offset; i < size; ++i) {

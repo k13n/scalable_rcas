@@ -75,6 +75,16 @@ void cas::Pager<PAGE_SZ>::Write(const IdxPage<PAGE_SZ>& page, cas::page_nr_t pag
 }
 
 
+template<size_t PAGE_SZ>
+void cas::Pager<PAGE_SZ>::Write(uint8_t* src, size_t size, size_t offset) {
+  file_.seekp(offset);
+  file_.write(reinterpret_cast<const char*>(src), size); // NOLINT
+  if (!file_.good()) {
+    throw std::runtime_error{"failed writing content " + std::to_string(offset)};
+  }
+}
+
+
 template class cas::Pager<cas::PAGE_SZ_64KB>;
 template class cas::Pager<cas::PAGE_SZ_32KB>;
 template class cas::Pager<cas::PAGE_SZ_16KB>;

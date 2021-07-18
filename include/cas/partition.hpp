@@ -22,6 +22,7 @@ class Partition {
   std::string filename_;
   size_t fptr_write_page_nr_ = 0;
   /* record statistics */
+  size_t nr_keys_ = 0;
   size_t nr_pages_ = 0;
   size_t nr_memory_pages_ = 0;
   size_t nr_disk_pages_ = 0;
@@ -66,10 +67,11 @@ public:
     return is_root_partition_;
   }
 
+  inline size_t& NrKeys() { return nr_keys_; }
   inline size_t& NrPages() { return nr_pages_; }
   inline size_t& NrMemoryPages() { return nr_memory_pages_; }
   inline size_t& NrDiskPages() { return nr_disk_pages_; }
-  inline const std::string& Filename() { return filename_; }
+  inline const std::string& Filename() const { return filename_; }
 
   void Close() { CloseFile(); }
   void DeleteFile();

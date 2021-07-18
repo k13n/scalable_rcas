@@ -17,6 +17,7 @@ void DumpHexValues(const std::vector<std::byte>& buffer, size_t size);
 void DumpHexValues(const std::vector<std::byte>& buffer, size_t offset, size_t size);
 void DumpHexValues(const std::byte* buffer, size_t size);
 void DumpHexValues(const std::byte* buffer, size_t offset, size_t size);
+void DumpHexValues(const uint8_t* buffer, size_t offset, size_t size);
 std::string IndexName(bool reverse_paths);
 std::string CreateLink(std::string revision);
 template<size_t N>
