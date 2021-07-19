@@ -273,7 +273,6 @@ size_t cas::BulkLoader<VType, PAGE_SZ>::Construct(
 
   if ((partition.NrKeys() <= context_.partitioning_threshold_) ||
       (dsc_p >= key_len_p && dsc_v >= key_len_v)) {
-    /* std::cout << "[DEBUG] reached base case" << std::endl; */
     // stop partitioning further if
     // - the partition contains at most \tau (partitioning threshold) keys
     // - the partition contains only one distinct key, but
@@ -283,7 +282,6 @@ size_t cas::BulkLoader<VType, PAGE_SZ>::Construct(
     ConstructLeafNode(node, partition);
     next_pos += node.ByteSize(0);
   } else {
-    /* std::cout << "[DEBUG] recursive case" << std::endl; */
     if (dimension == cas::Dimension::PATH && dsc_p >= key_len_p) {
       dimension = cas::Dimension::VALUE;
     } else if (dimension == cas::Dimension::VALUE && dsc_v >= key_len_v) {
@@ -312,14 +310,9 @@ size_t cas::BulkLoader<VType, PAGE_SZ>::Construct(
     }
 
     next_pos += node.ByteSize(table.NrPartitions());
-    /* std::cout << "[DEBUG] hello world 7" <<  std::endl; */
-    /* std::cout << "[DEBUG] node_size: " << node.ByteSize(table.NrPartitions()) << std::endl; */
-    /* std::cout << "[DEBUG] next_pos: " << next_pos << std::endl; */
-
     for (int byte = 0x00; byte <= 0xFF; ++byte) {
       if (table.Exists(byte)) {
         node.children_pointers_.emplace_back(static_cast<std::byte>(byte), next_pos);
-        /* std::cout << "[DEBUG] T byte exists: " << byte << std::endl; */
         next_pos = Construct(table[byte], dim_next, dimension, depth + 1, next_pos);
       }
     }
@@ -328,13 +321,6 @@ size_t cas::BulkLoader<VType, PAGE_SZ>::Construct(
   // Write to disk
   size_t node_size = SerializeNode(node);
   pager_.Write(&serialization_buffer_->at(0), node_size, offset);
-
-  /* if (depth == 0) { */
-  /*   std::cout << "Write node to disk from " << offset << " to " << */
-  /*     (offset + node_size) << "\n"; */
-  /*   cas::util::DumpHexValues(&serialization_buffer_->at(0), 0, node_size); */
-  /*   std::cout << "\n"; */
-  /* } */
 
   return next_pos;
 }
@@ -635,8 +621,6 @@ size_t cas::BulkLoader<VType, PAGE_SZ>::SerializeNode(Node& node) {
 
   // validation
   if (offset != node.ByteSize(node.children_pointers_.size())) {
-    /* std::cout << "[DEBUG] serial_size: " << offset << "\n"; */
-    /* std::cout << "[DEBUG] node_size: " << node.ByteSize(node.children_pointers_.size()) << "\n"; */
     throw std::runtime_error{"serialization size does not match expected size"};
   }
 
