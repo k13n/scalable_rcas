@@ -35,25 +35,6 @@ using ChildCallback = std::function<void(
 
 
 
-// class LRUCache {
-//     // hash pagenr to page
-//     std::unordered_map<cas::page_nr_t, std::shared_ptr<cas::page_t>> nr_to_page;
-//
-//     // store keys of cache (pagenr)
-//     std::list<cas::page_nr_t> dq;
-//
-//     // store references of key in cache
-//     std::unordered_map<cas::page_nr_t, std::list<cas::page_nr_t>::iterator> ma;
-//
-// public:
-//     LRUCache();
-//
-//     // load a Page in or from LRU cache
-//     std::pair<std::shared_ptr<cas::page_t>, bool> fetch(cas::page_nr_t pagenr, cas::Pager& pager);
-// };
-
-
-
 template<class VType, size_t PAGE_SZ>
 class Query {
   struct State {

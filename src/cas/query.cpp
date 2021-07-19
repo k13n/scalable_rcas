@@ -1,4 +1,5 @@
 #include "cas/query.hpp"
+#include "cas/node_reader.hpp"
 #include "cas/key_decoder.hpp"
 #include "cas/util.hpp"
 /* #include "cas/page_buffer.hpp" */

@@ -575,6 +575,9 @@ size_t cas::BulkLoader<VType, PAGE_SZ>::SerializeNode(Node& node) {
   if (node.value_.size() > std::numeric_limits<uint8_t>::max()) {
     throw std::runtime_error{"value size exceeds uint8_t"};
   }
+  if (node.children_pointers_.size() > std::numeric_limits<uint8_t>::max()) {
+    throw std::runtime_error{"number of children exceeds uint8_t"};
+  }
   if (node.suffixes_.size() > std::numeric_limits<uint16_t>::max()) {
     throw std::runtime_error{"number of suffixes exceeds uint16_t"};
   }
@@ -593,7 +596,8 @@ size_t cas::BulkLoader<VType, PAGE_SZ>::SerializeNode(Node& node) {
   buffer[offset++] = static_cast<uint8_t>(node.dimension_);
   buffer[offset++] = static_cast<uint8_t>(node.path_.size());;
   buffer[offset++] = static_cast<uint8_t>(node.value_.size());
-  CopyToSerializationBuffer(offset, &m, sizeof(uint16_t));
+  buffer[offset++] = static_cast<uint8_t>((m >> 8) & 0xFF);
+  buffer[offset++] = static_cast<uint8_t>((m >> 0) & 0xFF);
   CopyToSerializationBuffer(offset, &node.path_[0], node.path_.size());
   CopyToSerializationBuffer(offset, &node.value_[0], node.value_.size());
 

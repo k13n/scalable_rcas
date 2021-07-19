@@ -4,6 +4,7 @@ add_library(cas
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/binary_key.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/bulk_loader.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/bulk_loader_stats.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/dimension.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/index_stats.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/histogram.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/key.cpp
@@ -16,6 +17,7 @@ add_library(cas
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/partition_table.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/path_matcher.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/query.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/query2.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/query_stats.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/record.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/search_key.cpp
