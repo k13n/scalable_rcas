@@ -490,14 +490,14 @@ template<class VType, size_t PAGE_SZ>
 size_t cas::BulkLoader<VType, PAGE_SZ>::SerializeNode(Node& node) {
   auto& buffer = *serialization_buffer_.get();
 
-  size_t path_bound  = (1 << 12) - 1;
-  size_t value_bound = (1 <<  4) - 1;
+  size_t path_limit  = (1 << 12) - 1;
+  size_t value_limit = (1 <<  4) - 1;
 
   // check bounds
-  if (node.path_.size() > path_bound) {
+  if (node.path_.size() > path_limit) {
     throw std::runtime_error{"path size exceeds 2**12-1"};
   }
-  if (node.value_.size() > value_bound) {
+  if (node.value_.size() > value_limit) {
     throw std::runtime_error{"value size exceeds 2**4-1"};
   }
   if (node.children_pointers_.size() > 256) {
@@ -532,11 +532,11 @@ size_t cas::BulkLoader<VType, PAGE_SZ>::SerializeNode(Node& node) {
   if (node.IsLeaf()) {
     // serialize suffixes
     for (const auto& suffix : node.suffixes_) {
-      if (suffix.path_.size() > std::numeric_limits<uint8_t>::max()) {
-        throw std::runtime_error{"path-suffix size exceeds uint8_t"};
+      if (suffix.path_.size() > path_limit) {
+        throw std::runtime_error{"path-suffix size exceeds 2**12-1"};
       }
-      if (suffix.value_.size() > std::numeric_limits<uint8_t>::max()) {
-        throw std::runtime_error{"value-suffix size exceeds uint8_t"};
+      if (suffix.value_.size() > value_limit) {
+        throw std::runtime_error{"value-suffix size exceeds 2**4-1"};
       }
       pv_len = cas::util::EncodeSizes(suffix.path_.size(), suffix.value_.size());
       buffer[offset++] = static_cast<uint8_t>((pv_len >> 8) & 0xFF);
