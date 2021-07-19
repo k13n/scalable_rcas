@@ -1,17 +1,18 @@
-#include "benchmark/exp_lazy_interleaving.hpp"
+#include "benchmark/exp_partitioning_threshold.hpp"
 #include "benchmark/option_parser.hpp"
 
 int main_(int argc, char** argv) {
   using VType = cas::vint64_t;
   constexpr auto PAGE_SZ = cas::PAGE_SZ_16KB;
-  using Exp = benchmark::ExpLazyInterleaving<VType, PAGE_SZ>;
+  using Exp = benchmark::ExpPartitioningThreshold<VType, PAGE_SZ>;
 
   cas::Context context;
   benchmark::option_parser::Parse(argc, argv, context);
 
-  std::vector<bool> interleaving_options = {
-    false,
-    true,
+  std::vector<size_t> partitioning_thresholds = {
+    1,
+    200,
+    1000,
   };
   std::vector<size_t> dataset_sizes = {
      25'000'000'000,
@@ -20,7 +21,7 @@ int main_(int argc, char** argv) {
     100'000'000'000,
   };
 
-  Exp bm{context, interleaving_options, dataset_sizes};
+  Exp bm{context, partitioning_thresholds, dataset_sizes};
   bm.Execute();
 
   return 0;

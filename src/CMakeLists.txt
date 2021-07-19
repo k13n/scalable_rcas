@@ -31,7 +31,7 @@ add_library(cas
   ${CMAKE_CURRENT_SOURCE_DIR}/benchmark/exp_dsc_computation.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/benchmark/exp_memory_management.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/benchmark/exp_page_size.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/benchmark/exp_structure.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/benchmark/exp_lazy_interleaving.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/benchmark/exp_partitioning_threshold.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/benchmark/exp_querying.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/benchmark/exp_structure.cpp
 )

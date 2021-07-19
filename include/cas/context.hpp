@@ -14,7 +14,6 @@ struct Context {
   size_t mem_capacity_bytes_ = 0;
   size_t dataset_size_ = 0;
   size_t partitioning_threshold_ = 1;
-  bool use_lazy_interleaving_ = true;
   bool reverse_paths_ = false;
   bool use_direct_io_ = false;
   ClusteringAlgorithm clustering_algorithm_ = cas::ClusteringAlgorithm::RS;
@@ -37,7 +36,6 @@ struct Context {
     std::cout << "\nmem_capacity_bytes_: " << mem_capacity_bytes_;
     std::cout << "\ndataset_size_: " << dataset_size_;
     std::cout << "\npartitioning_threshold_: " << partitioning_threshold_;
-    std::cout << "\nuse_lazy_interleaving_: " << use_lazy_interleaving_;
     std::cout << "\nreverse_paths_: " << reverse_paths_;
     std::cout << "\nuse_direct_io_: " << use_direct_io_;
     std::cout << "\nclustering_algorithm_: " << ToString(clustering_algorithm_);

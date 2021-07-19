@@ -44,20 +44,20 @@ void Parse(int argc, char** argv, cas::Context& context) {
   const int OPT_INDEX_FILE = 3;
   const int OPT_MEM_SIZE = 4;
   const int OPT_INPUT_SIZE = 5;
-  const int OPT_LAZY_INTERLEAVING = 6;
+  const int OPT_PARTITIONING_THRESHOLD = 6;
   const int OPT_DIRECT_IO = 7;
   const int OPT_PARTITIONING_DSC = 8;
   const int OPT_MEMORY_PLACEMENT = 9;
   static struct option long_options[] = {
-    {"input_filename",    required_argument, nullptr, OPT_INPUT_FILENAME},
-    {"partition_folder",  required_argument, nullptr, OPT_PARTITION_FOLDER},
-    {"index_file",        required_argument, nullptr, OPT_INDEX_FILE},
-    {"mem_size",          required_argument, nullptr, OPT_MEM_SIZE},
-    {"input_size",        required_argument, nullptr, OPT_INPUT_SIZE},
-    {"lazy_interleaving", required_argument, nullptr, OPT_LAZY_INTERLEAVING},
-    {"direct_io",         required_argument, nullptr, OPT_DIRECT_IO},
-    {"partitioning_dsc",  required_argument, nullptr, OPT_PARTITIONING_DSC},
-    {"memory_placement",  required_argument, nullptr, OPT_MEMORY_PLACEMENT},
+    {"input_filename",         required_argument, nullptr, OPT_INPUT_FILENAME},
+    {"partition_folder",       required_argument, nullptr, OPT_PARTITION_FOLDER},
+    {"index_file",             required_argument, nullptr, OPT_INDEX_FILE},
+    {"mem_size",               required_argument, nullptr, OPT_MEM_SIZE},
+    {"input_size",             required_argument, nullptr, OPT_INPUT_SIZE},
+    {"partitioning_threshold", required_argument, nullptr, OPT_PARTITIONING_THRESHOLD},
+    {"direct_io",              required_argument, nullptr, OPT_DIRECT_IO},
+    {"partitioning_dsc",       required_argument, nullptr, OPT_PARTITIONING_DSC},
+    {"memory_placement",       required_argument, nullptr, OPT_MEMORY_PLACEMENT},
     {0, 0, 0, 0}
   };
 
@@ -84,8 +84,8 @@ void Parse(int argc, char** argv, cas::Context& context) {
       case OPT_INPUT_SIZE:
         ParseSizeT(optarg, context.dataset_size_, long_options[option_index].name);
         break;
-      case OPT_LAZY_INTERLEAVING:
-        ParseBool(optvalue, context.use_lazy_interleaving_, long_options[option_index].name);
+      case OPT_PARTITIONING_THRESHOLD:
+        ParseSizeT(optarg, context.partitioning_threshold_, long_options[option_index].name);
         break;
       case OPT_DIRECT_IO:
         ParseBool(optvalue, context.use_direct_io_, long_options[option_index].name);

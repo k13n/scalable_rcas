@@ -6,13 +6,6 @@
 #include "cas/query.hpp"
 #include "cas/query_executor.hpp"
 #include "cas/search_key.hpp"
-#include <fcntl.h>
-#include <filesystem>
-#include <iostream>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
 
 
 template<class VType, size_t PAGE_SZ>
@@ -32,7 +25,7 @@ void CreateIndex(const cas::Context& context) {
 
 template<class VType>
 void ReadIndex(const cas::Context& context) {
-  /* std::string path = "/arch/arm/boot/**"; */
+  // std::string path = "/arch/arm/boot/**";
   std::string path = "/drivers/hid/**";
   VType low  = 1455182876;
   VType high = 1555182879;
@@ -54,7 +47,7 @@ void ReadIndex(const cas::Context& context) {
 }
 
 
-int main_(int argc, char** argv) {
+int main_(int /* argc */, char** /* argv */) {
   using VType = cas::vint64_t;
   constexpr auto PAGE_SZ = cas::PAGE_SZ_16KB;
 

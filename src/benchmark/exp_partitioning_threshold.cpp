@@ -1,26 +1,26 @@
-#include "benchmark/exp_lazy_interleaving.hpp"
+#include "benchmark/exp_partitioning_threshold.hpp"
 #include "cas/bulk_loader.hpp"
 #include "cas/util.hpp"
 
 
 template<class VType, size_t PAGE_SZ>
-benchmark::ExpLazyInterleaving<VType, PAGE_SZ>::ExpLazyInterleaving(
+benchmark::ExpPartitioningThreshold<VType, PAGE_SZ>::ExpPartitioningThreshold(
       const cas::Context& context,
-      const std::vector<bool>& interleaving_settings,
+      const std::vector<size_t>& thresholds,
       const std::vector<size_t>& dataset_sizes)
   : context_(context)
-  , interleaving_settings_(interleaving_settings)
+  , thresholds_(thresholds)
   , dataset_sizes_(dataset_sizes)
 {
 }
 
 
 template<class VType, size_t PAGE_SZ>
-void benchmark::ExpLazyInterleaving<VType, PAGE_SZ>::Execute() {
-  cas::util::Log("Experiment ExpLazyInterleaving\n\n");
-  for (const auto& interleaving_setting : interleaving_settings_) {
+void benchmark::ExpPartitioningThreshold<VType, PAGE_SZ>::Execute() {
+  cas::util::Log("Experiment ExpPartitioningThreshold\n\n");
+  for (const auto& threshold : thresholds_) {
     for (const auto& dataset_size : dataset_sizes_) {
-      Execute(interleaving_setting, dataset_size);
+      Execute(threshold, dataset_size);
     }
   }
   PrintOutput();
@@ -28,13 +28,13 @@ void benchmark::ExpLazyInterleaving<VType, PAGE_SZ>::Execute() {
 
 
 template<class VType, size_t PAGE_SZ>
-void benchmark::ExpLazyInterleaving<VType, PAGE_SZ>::Execute(
-    bool interleaving_setting,
+void benchmark::ExpPartitioningThreshold<VType, PAGE_SZ>::Execute(
+    size_t threshold,
     size_t dataset_size)
 {
   // copy the context;
   auto context = context_;
-  context.use_lazy_interleaving_ = interleaving_setting;
+  context.partitioning_threshold_ = threshold;
   context.dataset_size_ = dataset_size;
 
   // print input
@@ -59,17 +59,17 @@ void benchmark::ExpLazyInterleaving<VType, PAGE_SZ>::Execute(
 
 
 template<class VType, size_t PAGE_SZ>
-void benchmark::ExpLazyInterleaving<VType, PAGE_SZ>::PrintOutput() {
+void benchmark::ExpPartitioningThreshold<VType, PAGE_SZ>::PrintOutput() {
   std::cout << "\n\n\n";
   cas::util::Log("Summary:\n\n");
-  std::cout << "use_lazy_interleaving;dataset_size_b;nr_input_keys;runtime_ms;runtime_m;runtime_h;disk_overhead_b;disk_overhead_gb;disk_io_gb;partitions_created;index_bytes_written_b;index_bytes_written_gb\n";
+  std::cout << "threshold;dataset_size_b;nr_input_keys;runtime_ms;runtime_m;runtime_h;disk_overhead_b;disk_overhead_gb;disk_io_gb;partitions_created;index_bytes_written_b;index_bytes_written_gb\n";
   for (const auto& [context, stats] : results_) {
     auto runtime_ms = std::chrono::duration_cast<std::chrono::milliseconds>(stats.runtime_.time_).count();
     auto runtime_m  = std::chrono::duration_cast<std::chrono::minutes>(stats.runtime_.time_).count();
     auto runtime_h  = std::chrono::duration_cast<std::chrono::hours>(stats.runtime_.time_).count();
     auto disk_overhead_b  = stats.IoOverhead();
     auto disk_overhead_gb = disk_overhead_b / 1'000'000'000.0;
-    std::cout << context.use_lazy_interleaving_ << ";";
+    std::cout << context.partitioning_threshold_ << ";";
     std::cout << context.dataset_size_ << ";";
     std::cout << stats.nr_input_keys_ << ";";
     std::cout << runtime_ms << ";";
@@ -85,8 +85,8 @@ void benchmark::ExpLazyInterleaving<VType, PAGE_SZ>::PrintOutput() {
 }
 
 
-template class benchmark::ExpLazyInterleaving<cas::vint64_t, cas::PAGE_SZ_64KB>;
-template class benchmark::ExpLazyInterleaving<cas::vint64_t, cas::PAGE_SZ_32KB>;
-template class benchmark::ExpLazyInterleaving<cas::vint64_t, cas::PAGE_SZ_16KB>;
-template class benchmark::ExpLazyInterleaving<cas::vint64_t, cas::PAGE_SZ_8KB>;
-template class benchmark::ExpLazyInterleaving<cas::vint64_t, cas::PAGE_SZ_4KB>;
+template class benchmark::ExpPartitioningThreshold<cas::vint64_t, cas::PAGE_SZ_64KB>;
+template class benchmark::ExpPartitioningThreshold<cas::vint64_t, cas::PAGE_SZ_32KB>;
+template class benchmark::ExpPartitioningThreshold<cas::vint64_t, cas::PAGE_SZ_16KB>;
+template class benchmark::ExpPartitioningThreshold<cas::vint64_t, cas::PAGE_SZ_8KB>;
+template class benchmark::ExpPartitioningThreshold<cas::vint64_t, cas::PAGE_SZ_4KB>;
