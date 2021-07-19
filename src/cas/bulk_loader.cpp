@@ -490,12 +490,15 @@ template<class VType, size_t PAGE_SZ>
 size_t cas::BulkLoader<VType, PAGE_SZ>::SerializeNode(Node& node) {
   auto& buffer = *serialization_buffer_.get();
 
+  size_t path_bound  = (1 << 12) - 1;
+  size_t value_bound = (1 <<  4) - 1;
+
   // check bounds
-  if (node.path_.size() > std::numeric_limits<uint8_t>::max()) {
-    throw std::runtime_error{"path size exceeds uint8_t"};
+  if (node.path_.size() > path_bound) {
+    throw std::runtime_error{"path size exceeds 2**12-1"};
   }
-  if (node.value_.size() > std::numeric_limits<uint8_t>::max()) {
-    throw std::runtime_error{"value size exceeds uint8_t"};
+  if (node.value_.size() > value_bound) {
+    throw std::runtime_error{"value size exceeds 2**4-1"};
   }
   if (node.children_pointers_.size() > 256) {
     throw std::runtime_error{"number of children exceeds 256"};
@@ -512,12 +515,15 @@ size_t cas::BulkLoader<VType, PAGE_SZ>::SerializeNode(Node& node) {
     ? static_cast<uint16_t>(node.suffixes_.size())
     : static_cast<uint16_t>(node.children_pointers_.size());
 
+  // encode path and value length in one uint16_t (12 bits for plen, 4 bits for vlen);
+  uint16_t pv_len = cas::util::EncodeSizes(node.path_.size(), node.value_.size());
+
   // serialize header
   size_t offset = 0;
 
   buffer[offset++] = static_cast<uint8_t>(node.dimension_);
-  buffer[offset++] = static_cast<uint8_t>(node.path_.size());;
-  buffer[offset++] = static_cast<uint8_t>(node.value_.size());
+  buffer[offset++] = static_cast<uint8_t>((pv_len >> 8) & 0xFF);
+  buffer[offset++] = static_cast<uint8_t>((pv_len >> 0) & 0xFF);
   buffer[offset++] = static_cast<uint8_t>((m >> 8) & 0xFF);
   buffer[offset++] = static_cast<uint8_t>((m >> 0) & 0xFF);
   CopyToSerializationBuffer(offset, &node.path_[0], node.path_.size());
@@ -532,8 +538,9 @@ size_t cas::BulkLoader<VType, PAGE_SZ>::SerializeNode(Node& node) {
       if (suffix.value_.size() > std::numeric_limits<uint8_t>::max()) {
         throw std::runtime_error{"value-suffix size exceeds uint8_t"};
       }
-      buffer[offset++] = static_cast<uint8_t>(suffix.path_.size());
-      buffer[offset++] = static_cast<uint8_t>(suffix.value_.size());
+      pv_len = cas::util::EncodeSizes(suffix.path_.size(), suffix.value_.size());
+      buffer[offset++] = static_cast<uint8_t>((pv_len >> 8) & 0xFF);
+      buffer[offset++] = static_cast<uint8_t>((pv_len >> 0) & 0xFF);
       CopyToSerializationBuffer(offset, &suffix.path_[0], suffix.path_.size());
       CopyToSerializationBuffer(offset, &suffix.value_[0], suffix.value_.size());
       CopyToSerializationBuffer(offset, &suffix.ref_[0], suffix.ref_.size());

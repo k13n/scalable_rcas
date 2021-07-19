@@ -12,6 +12,23 @@
 
 namespace cas::util {
 
+inline uint16_t EncodeSizes(size_t plen, size_t vlen) {
+  uint16_t result = 0;
+  result |= (static_cast<uint16_t>(plen <<  4) & 0xFFF0);
+  result |= (static_cast<uint16_t>(vlen <<  0) & 0x000F);
+  return result;
+}
+
+
+inline std::pair<uint16_t, uint16_t> DecodeSizes(uint16_t value) {
+  uint16_t plen = 0;
+  uint16_t vlen = 0;
+  plen |= ((value >>  4) & 0x0FFF);
+  vlen |= ((value >>  0) & 0x000F);
+  return {plen, vlen};
+}
+
+
 void DumpHexValues(const std::vector<std::byte>& buffer);
 void DumpHexValues(const std::vector<std::byte>& buffer, size_t size);
 void DumpHexValues(const std::vector<std::byte>& buffer, size_t offset, size_t size);

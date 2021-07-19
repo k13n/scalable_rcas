@@ -14,8 +14,7 @@ namespace cas {
 
 class NodeReader {
   static constexpr int POS_D = 0;
-  static constexpr int POS_LEN_P = 1;
-  static constexpr int POS_LEN_V = 2;
+  static constexpr int POS_LEN_PV = 1;
   static constexpr int POS_M = 3;
   static constexpr int POS_P = 5;
 
@@ -25,8 +24,8 @@ public:
 
   using ChildCallback = std::function<void(uint8_t byte, size_t pos)>;
   using SuffixCallback = std::function<void(
-      uint8_t len_p, const uint8_t* path,
-      uint8_t len_v, const uint8_t* value,
+      uint16_t len_p, const uint8_t* path,
+      uint16_t len_v, const uint8_t* value,
       cas::ref_t ref)>;
 
 
@@ -37,11 +36,19 @@ public:
   }
 
   inline uint8_t LenPath() const {
-    return buffer_[POS_LEN_P];
+    uint16_t data = 0;
+    data |= static_cast<uint16_t>(buffer_[POS_LEN_PV]   << 8);
+    data |= static_cast<uint16_t>(buffer_[POS_LEN_PV+1] << 0);
+    auto [plen, vlen] = cas::util::DecodeSizes(data);
+    return plen;
   }
 
   inline uint8_t LenValue() const {
-    return buffer_[POS_LEN_V];
+    uint16_t data = 0;
+    data |= static_cast<uint16_t>(buffer_[POS_LEN_PV]   << 8);
+    data |= static_cast<uint16_t>(buffer_[POS_LEN_PV+1] << 0);
+    auto [plen, vlen] = cas::util::DecodeSizes(data);
+    return vlen;
   }
 
   inline uint16_t NrEntries() const {
@@ -97,8 +104,10 @@ public:
   void ForEachSuffix(const SuffixCallback& callback) const {
     size_t offset = POS_P + LenPath() + LenValue();
     for (uint16_t i = 0, sz = NrSuffixes(); i < sz; ++i) {
-      uint8_t len_p = buffer_[offset++];
-      uint8_t len_v = buffer_[offset++];
+      uint16_t len_data = 0;
+      len_data |= static_cast<uint16_t>(buffer_[offset++] << 8);
+      len_data |= static_cast<uint16_t>(buffer_[offset++] << 0);
+      auto [len_p, len_v] = cas::util::DecodeSizes(len_data);
       const uint8_t* path  = &buffer_[offset];
       offset += len_p;
       const uint8_t* value = &buffer_[offset];

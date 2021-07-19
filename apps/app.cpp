@@ -60,16 +60,15 @@ int main_(int /* argc */, char** /* argv */) {
     .mem_size_bytes_ = 1'000'000'000,
     .dataset_size_ = 16384*100000,
     /* .dataset_size_ = 16384*10000, */
-    /* .partitioning_threshold_ = 200, */
+    .partitioning_threshold_ = 200,
     /* .dataset_size_ = 16384, */
   };
   std::cout << "Configuration:\n";
   context.Dump();
   std::cout << std::endl;
 
-  /* CreateIndex<VType, PAGE_SZ>(context); */
-
   context.index_file_ = "/local/scratch/wellenzohn/workspace/indexes/index.bin.new";
+  /* CreateIndex<VType, PAGE_SZ>(context); */
   ReadIndex<VType>(context);
 
   return 0;

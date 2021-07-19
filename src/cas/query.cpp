@@ -90,8 +90,8 @@ void cas::Query<VType>::EvaluateLeafNode(State& s,
 
   // check for each suffix if it matches
   node.ForEachSuffix([&](
-        uint8_t len_p, const uint8_t* path,
-        uint8_t len_v, const uint8_t* value,
+        uint16_t len_p, const uint8_t* path,
+        uint16_t len_v, const uint8_t* value,
         cas::ref_t ref){
     // we need to copy the state since it is mutated
     State leaf_state = s;
