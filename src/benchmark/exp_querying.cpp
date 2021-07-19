@@ -1,21 +1,20 @@
 #include "benchmark/exp_querying.hpp"
 #include "cas/key_encoder.hpp"
+#include "cas/query_executor.hpp"
 #include "cas/util.hpp"
 #include <fstream>
 #include <sstream>
 #include <string>
 
 
-template<class VType, size_t PAGE_SZ>
-benchmark::ExpQuerying<VType, PAGE_SZ>::ExpQuerying(
+template<class VType>
+benchmark::ExpQuerying<VType>::ExpQuerying(
       const std::string& index_file,
       const std::vector<cas::SearchKey<VType>>& queries,
       int nr_repetitions)
   : index_file_(index_file)
   , queries_(queries)
   , nr_repetitions_(nr_repetitions)
-  , pager_(index_file)
-  , page_buffer_(0)
 {
   bool reverse_paths = false;
   for (const auto& query : queries_) {
@@ -24,8 +23,8 @@ benchmark::ExpQuerying<VType, PAGE_SZ>::ExpQuerying(
 }
 
 
-template<class VType, size_t PAGE_SZ>
-void benchmark::ExpQuerying<VType, PAGE_SZ>::Execute() {
+template<class VType>
+void benchmark::ExpQuerying<VType>::Execute() {
   cas::util::Log("Experiment ExpQuerying\n");
   std::cout << "index_file: " << index_file_ << "\n\n";
 
@@ -33,16 +32,15 @@ void benchmark::ExpQuerying<VType, PAGE_SZ>::Execute() {
   for (int i = 0; i < nr_repetitions_; ++i) {
     cas::util::Log("Repetition " + std::to_string(i));
     for (const auto& search_key : encoded_queries_) {
-      /* cas::Query<VType, PAGE_SZ> query{pager_, page_buffer_, search_key, cas::kNullEmitter}; */
       const cas::BinaryKeyEmitter emitter = [](
           const cas::QueryBuffer& /* path */, size_t /* p_len */,
           const cas::QueryBuffer& /* value */, size_t /* v_len */,
           cas::ref_t ref) -> void {
         cas::ToString(ref);
       };
-      cas::Query<VType, PAGE_SZ> query{pager_, page_buffer_, search_key, emitter};
-      query.Execute();
-      results_.push_back(query.Stats());
+      cas::QueryExecutor<VType> query{index_file_};
+      auto stats = query.Execute(search_key, emitter);
+      results_.push_back(stats);
     }
   }
 
@@ -50,8 +48,8 @@ void benchmark::ExpQuerying<VType, PAGE_SZ>::Execute() {
 }
 
 
-template<class VType, size_t PAGE_SZ>
-void benchmark::ExpQuerying<VType, PAGE_SZ>::PrintOutput() {
+template<class VType>
+void benchmark::ExpQuerying<VType>::PrintOutput() {
   std::cout << "\n";
   cas::util::Log("Results per query:\n\n");
 
@@ -107,8 +105,4 @@ void benchmark::ExpQuerying<VType, PAGE_SZ>::PrintOutput() {
 }
 
 
-template class benchmark::ExpQuerying<cas::vint64_t, cas::PAGE_SZ_64KB>;
-template class benchmark::ExpQuerying<cas::vint64_t, cas::PAGE_SZ_32KB>;
-template class benchmark::ExpQuerying<cas::vint64_t, cas::PAGE_SZ_16KB>;
-template class benchmark::ExpQuerying<cas::vint64_t, cas::PAGE_SZ_8KB>;
-template class benchmark::ExpQuerying<cas::vint64_t, cas::PAGE_SZ_4KB>;
+template class benchmark::ExpQuerying<cas::vint64_t>;

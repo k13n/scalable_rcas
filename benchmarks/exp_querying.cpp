@@ -35,8 +35,7 @@ void ExecuteExperiment(
       int nr_repetitions)
 {
   using VType = cas::vint64_t;
-  constexpr auto PAGE_SZ = cas::PAGE_SZ_16KB;
-  using Exp = benchmark::ExpQuerying<VType, PAGE_SZ>;
+  using Exp = benchmark::ExpQuerying<VType>;
 
   std::cout << "Input:\n";
   std::cout << "index_file: " << index_file << "\n";

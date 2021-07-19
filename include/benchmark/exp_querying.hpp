@@ -11,13 +11,11 @@
 namespace benchmark {
 
 
-template<class VType, size_t PAGE_SZ>
+template<class VType>
 class ExpQuerying {
   const std::string& index_file_;
   const std::vector<cas::SearchKey<VType>>& queries_;
   int nr_repetitions_;
-  cas::Pager<PAGE_SZ> pager_;
-  cas::PageBuffer<PAGE_SZ> page_buffer_;
 
   std::vector<cas::BinarySK> encoded_queries_;
   std::vector<cas::QueryStats> results_;

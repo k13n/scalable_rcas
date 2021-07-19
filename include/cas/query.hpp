@@ -1,12 +1,11 @@
 #pragma once
 
-#include "cas/pager.hpp"
 #include "cas/key_encoding.hpp"
-#include "cas/record.hpp"
+#include "cas/node_reader.hpp"
+#include "cas/pager.hpp"
 #include "cas/path_matcher.hpp"
 #include "cas/query_stats.hpp"
 #include "cas/search_key.hpp"
-#include "cas/page_buffer.hpp"
 
 #include <deque>
 #include <functional>
@@ -30,18 +29,11 @@ const cas::BinaryKeyEmitter kNullEmitter = [&](
 };
 
 
-using ChildCallback = std::function<void(
-    std::byte byte, cas::page_nr_t page_nr, uint16_t offset)>;
-
-
-
-template<class VType, size_t PAGE_SZ>
+template<class VType>
 class Query {
   struct State {
     bool is_root_;
-    cas::page_nr_t page_nr_;
-    uint16_t page_offset_;
-    std::shared_ptr<IdxPage<PAGE_SZ>> page_;
+    size_t idx_position_ = 0;
     Dimension parent_dimension_;
     std::byte parent_byte_ = cas::kNullByte;
     // length of the prefixes matched so far
@@ -52,14 +44,13 @@ class Query {
     // state needed for the value matching
     uint16_t vl_pos_;
     uint16_t vh_pos_;
-    int depth_=0;
+    int depth_ = 0;
 
     void Dump() const;
   };
 
   /* cas::LRUCache lru; */
-  Pager<PAGE_SZ>& pager_;
-  const PageBuffer<PAGE_SZ>& page_buffer_;
+  const uint8_t* file_;
   const BinarySK& key_;
   const BinaryKeyEmitter& emitter_;
   std::unique_ptr<QueryBuffer> buf_pat_;
@@ -69,42 +60,31 @@ class Query {
 
 
 public:
-  Query(Pager<PAGE_SZ>& pager,
-      const PageBuffer<PAGE_SZ>& page_buffer,
+  Query(const uint8_t* file,
       const BinarySK& key,
       const BinaryKeyEmitter& emitter);
 
-  std::list<Key<VType>> Execute();
+  void Execute();
 
   const QueryStats& Stats() const {
     return stats_;
   }
 
 private:
-  void EvaluateInnerNode(State& s, const cas::Record& record);
-  void EvaluateLeafNode(State& s, const cas::Record& record);
-  void PrepareBuffer(State& s, const cas::Record& record);
-  void PrepareLeafBuffer(State& s, const cas::MemoryKey& leaf_key);
+  void EvaluateInnerNode(State& s, const cas::NodeReader& node);
+  void EvaluateLeafNode(State& s, const cas::NodeReader& node);
+  void PrepareBuffer(State& s, const cas::NodeReader& node);
   path_matcher::PrefixMatch MatchPathPrefix(State& s);
   path_matcher::PrefixMatch MatchValuePrefix(State& s);
-  void Descend(const State& s, const cas::Record& record);
-  void DescendPathNode(const State& s, const cas::Record& record);
-  void DescendValueNode(const State& s, const cas::Record& record);
-  void DescendNode(const State& s, const cas::Record& record,
+  void Descend(const State& s, const cas::NodeReader& node);
+  void DescendPathNode(const State& s, const cas::NodeReader& node);
+  void DescendValueNode(const State& s, const cas::NodeReader& node);
+  void DescendNode(const State& s, const cas::NodeReader& node,
       std::byte low, std::byte high);
   bool IsCompleteValue(State& s);
-  void EmitMatches(State& s, const cas::Record& record);
-  void EmitMatch(const State& s, const cas::MemoryKey& leaf_key);
-  void UpdateStats(const cas::Record& record);
+  void EmitMatch(const State& s, const cas::ref_t& ref);
+  void UpdateStats(const cas::NodeReader& node);
   void DumpState(State& s);
-  void ForEachChild(const cas::Record& record, std::byte low, std::byte high,
-      const ChildCallback& callback);
-  std::pair<Record,bool> FetchRecord(const State& s);
-  std::shared_ptr<IdxPage<PAGE_SZ>> FetchPage(cas::page_nr_t page_nr);
-
-  static void CopyFromPage(
-      const cas::IdxPage<PAGE_SZ>& page,
-      uint16_t& offset, void* dst, size_t count);
 };
 
 } // namespace cas

@@ -1,6 +1,6 @@
 #include <cas/key.hpp>
 #include <cas/key_encoder.hpp>
-#include <cas/query.hpp>
+#include <cas/query_executor.hpp>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -26,19 +26,17 @@ cas::SearchKey<cas::vint64_t> ParseQuery(
 
 
 
-template<class VType, size_t PAGE_SZ>
+template<class VType>
 class SelectivityComputer {
+  const std::string index_file_;
   size_t nr_keys_;
-  cas::Pager<PAGE_SZ> pager_;
-  cas::PageBuffer<PAGE_SZ> page_buffer_;
 
 public:
   SelectivityComputer(
         const std::string& index_file,
         size_t nr_keys)
-    : nr_keys_{nr_keys}
-    , pager_{index_file}
-    , page_buffer_{0}
+    : index_file_{index_file}
+    , nr_keys_{nr_keys}
   {}
 
   void Execute(cas::SearchKey<VType> skey) {
@@ -60,32 +58,30 @@ private:
     skey.Dump();
     bool reverse_paths = false;
     auto bkey = cas::KeyEncoder<cas::vint64_t>::Encode(skey, reverse_paths);
-    cas::Query<VType, PAGE_SZ> query{pager_, page_buffer_, bkey, cas::kNullEmitter};
-    query.Execute();
+    cas::QueryExecutor<VType> query{index_file_};
+    auto stats = query.Execute(bkey, cas::kNullEmitter);
 
     std::cout << "\n";
-    query.Stats().Dump();
-    std::cout << std::fixed << "selectivity: " << query.Stats().nr_matches_ / static_cast<double>(nr_keys_) << "\n";
+    stats.Dump();
+    std::cout << std::fixed << "selectivity: " << stats.nr_matches_ / static_cast<double>(nr_keys_) << "\n";
     std::cout << "\n\n";
   }
 
   void ExecuteConcise(cas::SearchKey<VType> skey) {
     bool reverse_paths = false;
     auto bkey = cas::KeyEncoder<cas::vint64_t>::Encode(skey, reverse_paths);
-    cas::Query<VType, PAGE_SZ> query{pager_, page_buffer_, bkey, cas::kNullEmitter};
-    query.Execute();
+    cas::QueryExecutor<VType> query{index_file_};
+    auto stats = query.Execute(bkey, cas::kNullEmitter);
 
     std::printf("%10zu (%f)  ",
-        query.Stats().nr_matches_,
-        query.Stats().nr_matches_ / static_cast<double>(nr_keys_));
+        stats.nr_matches_,
+        stats.nr_matches_ / static_cast<double>(nr_keys_));
   }
 };
 
 
 int main_(int argc, char** argv) {
   using VType = cas::vint64_t;
-  constexpr auto PAGE_SZ = cas::PAGE_SZ_16KB;
-
   if (argc < 4) {
     std::cerr << "Three arguments expected!" << std::endl;
     return -1;
@@ -98,7 +94,7 @@ int main_(int argc, char** argv) {
     std::cerr << "Could not parse option nr_keys";
   }
 
-  SelectivityComputer<VType, PAGE_SZ> computer{index_file, nr_keys};
+  SelectivityComputer<VType> computer{index_file, nr_keys};
 
   // parse queries
   std::vector<cas::SearchKey<VType>> queries;
