@@ -575,8 +575,8 @@ size_t cas::BulkLoader<VType, PAGE_SZ>::SerializeNode(Node& node) {
   if (node.value_.size() > std::numeric_limits<uint8_t>::max()) {
     throw std::runtime_error{"value size exceeds uint8_t"};
   }
-  if (node.children_pointers_.size() > std::numeric_limits<uint8_t>::max()) {
-    throw std::runtime_error{"number of children exceeds uint8_t"};
+  if (node.children_pointers_.size() > 256) {
+    throw std::runtime_error{"number of children exceeds 256"};
   }
   if (node.suffixes_.size() > std::numeric_limits<uint16_t>::max()) {
     throw std::runtime_error{"number of suffixes exceeds uint16_t"};
