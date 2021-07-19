@@ -44,7 +44,7 @@ class Query2 {
     // state needed for the value matching
     uint16_t vl_pos_;
     uint16_t vh_pos_;
-    int depth_=0;
+    int depth_ = 0;
 
     void Dump() const;
   };
@@ -64,7 +64,7 @@ public:
       const BinarySK& key,
       const BinaryKeyEmitter& emitter);
 
-  std::list<Key<VType>> Execute();
+  void Execute();
 
   const QueryStats& Stats() const {
     return stats_;
@@ -82,7 +82,6 @@ private:
   void DescendNode(const State& s, const cas::NodeReader& node,
       std::byte low, std::byte high);
   bool IsCompleteValue(State& s);
-  void EmitMatches(State& s, const cas::NodeReader& node);
   void EmitMatch(const State& s, const cas::ref_t& ref);
   void UpdateStats(const cas::NodeReader& node);
   void DumpState(State& s);

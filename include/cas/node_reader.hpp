@@ -71,6 +71,10 @@ public:
     return &buffer_[POS_P + LenPath()];
   }
 
+  inline bool IsInnerNode() const {
+    return Dimension() != cas::Dimension::LEAF;
+  }
+
   inline bool IsLeaf() const {
     return Dimension() == cas::Dimension::LEAF;
   }
@@ -96,9 +100,12 @@ public:
       uint8_t len_p = buffer_[offset++];
       uint8_t len_v = buffer_[offset++];
       const uint8_t* path  = &buffer_[offset];
-      const uint8_t* value = &buffer_[offset + len_p];
+      offset += len_p;
+      const uint8_t* value = &buffer_[offset];
+      offset += len_v;
       cas::ref_t ref;
-      std::memcpy(&ref[0], &buffer_[offset + len_p + len_v], sizeof(cas::ref_t));
+      std::memcpy(&ref[0], &buffer_[offset], sizeof(cas::ref_t));
+      offset += sizeof(cas::ref_t);
       callback(len_p, path, len_v, value, ref);
     }
   }
