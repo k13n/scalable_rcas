@@ -68,9 +68,6 @@ private:
       size_t& offset, const void* src, size_t count);
 
 
-  Key<VType> ProcessLine(const std::string& line, char delimiter);
-  std::string ReversePath(const std::string& path);
-
   void UpdatePartitionStats(const Partition<PAGE_SZ>& partition);
 
   void InitializeRootPartition(Partition<PAGE_SZ>& partition);
@@ -78,8 +75,5 @@ private:
   void DscByte(Partition<PAGE_SZ>& partition);
   void DscByteByByte(Partition<PAGE_SZ>& partition);
 };
-
-template<class VType>
-VType ParseValue(std::string& value);
 
 }

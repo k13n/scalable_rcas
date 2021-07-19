@@ -93,113 +93,6 @@ void cas::BulkLoader<VType, PAGE_SZ>::Load() {
 
 
 template<class VType, size_t PAGE_SZ>
-cas::Key<VType> cas::BulkLoader<VType, PAGE_SZ>::ProcessLine(
-      const std::string& line,
-      char delimiter) {
-  cas::Key<VType> key;
-
-  std::string path;
-  std::string value;
-  std::string ref;
-  std::stringstream line_stream(line);
-  std::getline(line_stream, path,  delimiter);
-  std::getline(line_stream, value, delimiter);
-  std::getline(line_stream, ref,   delimiter);
-
-  key.path_  = context_.reverse_paths_ ? ReversePath(path) : std::move(path);
-  key.value_ = ParseValue<VType>(value);
-  key.ref_   = ParseSwhPid(ref);
-
-  return key;
-}
-
-
-template<class VType, size_t PAGE_SZ>
-std::string cas::BulkLoader<VType, PAGE_SZ>::ReversePath(const std::string& path) {
-  std::vector<std::string> labels;
-  labels.reserve(20);
-  char delimiter = '/';
-  size_t prev_pos = 0;
-  size_t pos = 0;
-  while ((pos = path.find(delimiter, prev_pos)) != std::string::npos) {
-    if (pos > prev_pos) {
-      labels.push_back(path.substr(prev_pos, pos - prev_pos));
-    }
-    prev_pos = ++pos;
-  }
-  if (prev_pos < path.length()) {
-    labels.push_back(path.substr(prev_pos, path.length() - prev_pos));
-  }
-  std::string result = "";
-  for (auto i = labels.rbegin(); i != labels.rend(); ++i) {
-    result += *i + "/";
-  }
-  return result;
-}
-
-
-template<>
-cas::vint32_t cas::ParseValue<cas::vint32_t>(std::string& value) {
-  return std::stoi(value);
-}
-template<>
-cas::vint64_t cas::ParseValue<cas::vint64_t>(std::string& value) {
-  return std::stoll(value);
-}
-template<>
-std::string cas::ParseValue<std::string>(std::string& value) {
-  size_t pos = 0;
-  while (pos < value.size() && value[pos] == ' ') {
-    ++pos;
-  }
-  return value.substr(pos);
-}
-
-
-// add all the partial keys and their references
-template<class VType, size_t PAGE_SZ>
-void cas::BulkLoader<VType, PAGE_SZ>::ConstructLeafNode(
-      Node& node,
-      cas::Partition<PAGE_SZ>& partition) {
-  auto start = std::chrono::high_resolution_clock::now();
-  size_t dsc_p = partition.DscP();
-  size_t dsc_v = partition.DscV();
-  // iterate & delete every page in the partition
-  MemoryPage<PAGE_SZ> io_page = mpool_.input_.Get();
-  auto cursor = partition.Cursor(io_page);
-  while (cursor.HasNext()) {
-    auto page = cursor.RemoveNextPage();
-    for (auto key : page) {
-      MemoryKey lkey;
-      uint16_t new_len_p = 0;
-      uint16_t new_len_v = 0;
-      if (dsc_p < key.LenPath()) {
-        new_len_p = key.LenPath() - dsc_p;
-      }
-      if (dsc_v < key.LenValue()) {
-        new_len_v = key.LenValue() - dsc_v;
-      }
-      lkey.path_.reserve(new_len_p);
-      lkey.value_.reserve(new_len_v);
-      std::copy(key.Path() + dsc_p, key.Path() + key.LenPath(),
-          std::back_inserter(lkey.path_));
-      std::copy(key.Value() + dsc_v, key.Value() + key.LenValue(),
-          std::back_inserter(lkey.value_));
-      lkey.ref_ = key.Ref();
-      node.suffixes_.push_back(lkey);
-    }
-    if (page.Type() != cas::MemoryPageType::INPUT) {
-      mpool_.work_.Release(std::move(page));
-    }
-  }
-  partition.DeleteFile();
-  // return io_page to the input pool
-  mpool_.input_.Release(std::move(io_page));
-  cas::util::AddToTimer(stats_.runtime_construct_leaf_node_, start);
-}
-
-
-template<class VType, size_t PAGE_SZ>
 size_t cas::BulkLoader<VType, PAGE_SZ>::Construct(
           cas::Partition<PAGE_SZ>& partition,
           cas::Dimension dimension,
@@ -323,6 +216,49 @@ size_t cas::BulkLoader<VType, PAGE_SZ>::Construct(
   pager_.Write(&serialization_buffer_->at(0), node_size, offset);
 
   return next_pos;
+}
+
+
+// add all the partial keys and their references
+template<class VType, size_t PAGE_SZ>
+void cas::BulkLoader<VType, PAGE_SZ>::ConstructLeafNode(
+      Node& node,
+      cas::Partition<PAGE_SZ>& partition) {
+  auto start = std::chrono::high_resolution_clock::now();
+  size_t dsc_p = partition.DscP();
+  size_t dsc_v = partition.DscV();
+  // iterate & delete every page in the partition
+  MemoryPage<PAGE_SZ> io_page = mpool_.input_.Get();
+  auto cursor = partition.Cursor(io_page);
+  while (cursor.HasNext()) {
+    auto page = cursor.RemoveNextPage();
+    for (auto key : page) {
+      MemoryKey lkey;
+      uint16_t new_len_p = 0;
+      uint16_t new_len_v = 0;
+      if (dsc_p < key.LenPath()) {
+        new_len_p = key.LenPath() - dsc_p;
+      }
+      if (dsc_v < key.LenValue()) {
+        new_len_v = key.LenValue() - dsc_v;
+      }
+      lkey.path_.reserve(new_len_p);
+      lkey.value_.reserve(new_len_v);
+      std::copy(key.Path() + dsc_p, key.Path() + key.LenPath(),
+          std::back_inserter(lkey.path_));
+      std::copy(key.Value() + dsc_v, key.Value() + key.LenValue(),
+          std::back_inserter(lkey.value_));
+      lkey.ref_ = key.Ref();
+      node.suffixes_.push_back(lkey);
+    }
+    if (page.Type() != cas::MemoryPageType::INPUT) {
+      mpool_.work_.Release(std::move(page));
+    }
+  }
+  partition.DeleteFile();
+  // return io_page to the input pool
+  mpool_.input_.Release(std::move(io_page));
+  cas::util::AddToTimer(stats_.runtime_construct_leaf_node_, start);
 }
 
 
@@ -591,10 +527,10 @@ size_t cas::BulkLoader<VType, PAGE_SZ>::SerializeNode(Node& node) {
     // serialize suffixes
     for (const auto& suffix : node.suffixes_) {
       if (suffix.path_.size() > std::numeric_limits<uint8_t>::max()) {
-        throw std::runtime_error{"path size exceeds uint8_t"};
+        throw std::runtime_error{"path-suffix size exceeds uint8_t"};
       }
       if (suffix.value_.size() > std::numeric_limits<uint8_t>::max()) {
-        throw std::runtime_error{"value size exceeds uint8_t"};
+        throw std::runtime_error{"value-suffix size exceeds uint8_t"};
       }
       buffer[offset++] = static_cast<uint8_t>(suffix.path_.size());
       buffer[offset++] = static_cast<uint8_t>(suffix.value_.size());
@@ -789,9 +725,7 @@ void cas::BulkLoader<VType, PAGE_SZ>::DscByteByByte(
 
 template<class VType, size_t PAGE_SZ>
 void cas::BulkLoader<VType, PAGE_SZ>::InitializeRootPartition(
-    cas::Partition<PAGE_SZ>& partition) {
-
-
+      cas::Partition<PAGE_SZ>& partition) {
   // declare it the root partition
   partition.IsRootPartition(true);
 
