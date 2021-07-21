@@ -10,6 +10,13 @@ add_library(cas
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/key.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/key_decoder.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/key_encoder.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/mem/insertion.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/mem/node.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/mem/node0.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/mem/node4.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/mem/node16.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/mem/node48.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/mem/node256.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/memory_page.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/memory_pool.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/pager.cpp

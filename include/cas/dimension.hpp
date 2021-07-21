@@ -12,5 +12,6 @@ enum class Dimension : uint8_t {
 };
 
 std::string ToString(Dimension dim);
+cas::Dimension AlternateDimension(Dimension dim);
 
 } // namespace cas

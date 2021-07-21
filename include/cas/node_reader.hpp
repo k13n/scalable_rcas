@@ -35,7 +35,7 @@ public:
     return static_cast<cas::Dimension>(buffer_[POS_D]);
   }
 
-  inline uint8_t LenPath() const {
+  inline uint16_t LenPath() const {
     uint16_t data = 0;
     data |= static_cast<uint16_t>(buffer_[POS_LEN_PV]   << 8);
     data |= static_cast<uint16_t>(buffer_[POS_LEN_PV+1] << 0);
@@ -43,7 +43,7 @@ public:
     return plen;
   }
 
-  inline uint8_t LenValue() const {
+  inline uint16_t LenValue() const {
     uint16_t data = 0;
     data |= static_cast<uint16_t>(buffer_[POS_LEN_PV]   << 8);
     data |= static_cast<uint16_t>(buffer_[POS_LEN_PV+1] << 0);
