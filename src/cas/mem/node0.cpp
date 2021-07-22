@@ -30,7 +30,7 @@ void cas::mem::Node0::ForEachChild(const cas::INode::ChildCallback& /* callback 
 }
 
 
-void cas::mem::Node0::ForEachSimpleSuffix(const SimpleSuffixCallback& callback) const {
+void cas::mem::Node0::ForEachSuffix(const SuffixCallback& callback) const {
   for (const auto& suffix : suffixes_) {
     callback(suffix);
   }

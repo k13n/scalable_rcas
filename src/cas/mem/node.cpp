@@ -32,7 +32,7 @@ void cas::mem::Node::DumpRecursive(uint8_t parent_byte, int depth) const {
   ForEachChild([&](uint8_t byte, INode* child){
     static_cast<Node*>(child)->DumpRecursive(byte, depth+1);
   });
-  ForEachSimpleSuffix([&](const auto& suffix){
+  ForEachSuffix([&](const auto& suffix){
     for (int i = 0; i < depth+1; ++i) {
       std::cout << "  ";
     }
