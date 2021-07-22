@@ -34,6 +34,9 @@ private:
       size_t gP, size_t gV,
       size_t iP, size_t iV);
 
+  Node* PartitionLeafNode(Node0* node);
+
+
 };
 
 

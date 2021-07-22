@@ -13,7 +13,7 @@ void cas::mem::Node256::ForEachChild(
       const cas::mem::ChildIterator& callback) const {
   for (int i = low; i <= high; ++i) {
     if (children_[i] != nullptr) {
-      callback(static_cast<uint8_t>(i), *children_[i]);
+      callback(static_cast<uint8_t>(i), children_[i]);
     }
   }
 }

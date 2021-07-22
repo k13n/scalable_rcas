@@ -12,7 +12,7 @@ namespace cas {
 namespace mem {
 
 class Node;
-using ChildIterator = std::function<bool(uint8_t, Node&)>;
+using ChildIterator = std::function<void(uint8_t, Node*)>;
 
 using SuffixIterator = std::function<void(const cas::MemoryKey&)>;
 
@@ -22,7 +22,6 @@ class Node {
 public:
   cas::Dimension dimension_;
   uint16_t nr_children_ = 0;
-  uint16_t nr_suffixes_ = 0;
   uint16_t separator_pos_ = 0;
   std::vector<uint8_t> prefixes_;
 
@@ -37,7 +36,7 @@ public:
   const uint8_t* Value() const;
   bool IsFull() const;
   uint16_t NrChildren() const;
-  uint16_t NrSuffixes() const;
+  virtual size_t NrSuffixes() const = 0;
   virtual int NodeWidth() const = 0;
 
   // traversing
@@ -49,6 +48,9 @@ public:
   virtual void Put(uint8_t key_byte, Node *child) = 0;
   virtual Node* Grow() = 0;
   virtual void ReplaceBytePointer(uint8_t key_byte, Node* child) = 0;
+
+  // dumping
+  void DumpRecursive(uint8_t parent_byte = 0, int depth = 0) const;
 };
 
 

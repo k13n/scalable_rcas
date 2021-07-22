@@ -12,14 +12,15 @@ public:
   std::vector<cas::MemoryKey> suffixes_;
 
   Node0();
-
   Node0(const BinaryKey& bkey, size_t path_pos, size_t value_pos);
-  /* Node0(const InterleavedKey& ikey, size_t pos); */
 
   // meta information
   int NodeWidth() const override {
     return 0;
   };
+  size_t NrSuffixes() const override {
+    return suffixes_.size();
+  }
 
   // traversing
   Node* LocateChild(uint8_t key_byte) const override;

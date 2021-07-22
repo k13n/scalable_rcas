@@ -16,7 +16,7 @@ void cas::mem::Node4::ForEachChild(
       const cas::mem::ChildIterator& callback) const {
   for (int i = 0; i < nr_children_; ++i) {
     if (low <= keys_[i] && keys_[i] <= high) {
-      callback(keys_[i], *children_[i]);
+      callback(keys_[i], children_[i]);
     }
   }
 }

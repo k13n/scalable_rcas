@@ -15,7 +15,7 @@ void cas::mem::Node48::ForEachChild(
       const cas::mem::ChildIterator& callback) const {
   for (int i = low; i <= high; ++i) {
     if (indexes_[i] != cas::mem::kEmptyIndex) {
-      callback(static_cast<uint8_t>(i), *children_[indexes_[i]]);
+      callback(static_cast<uint8_t>(i), children_[indexes_[i]]);
     }
   }
 }

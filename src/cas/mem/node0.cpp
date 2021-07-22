@@ -14,8 +14,8 @@ cas::mem::Node0::Node0(const cas::BinaryKey& bkey,
   size_t len_value = bkey.LenValue() - value_pos;
   // fill prefix_ with the remaining path and value bytes
   prefixes_.resize(len_path + len_value);
-  std::memcpy(&prefixes_[0], bkey.Path(), len_path);
-  std::memcpy(&prefixes_[0] + len_path, bkey.Value(), len_value);
+  std::memcpy(&prefixes_[0], bkey.Path() + path_pos, len_path);
+  std::memcpy(&prefixes_[0] + len_path, bkey.Value() + value_pos, len_value);
   separator_pos_ = len_path;
   // add the ref
   cas::MemoryKey memkey;
@@ -32,8 +32,10 @@ void cas::mem::Node0::ForEachChild(
 }
 
 
-void cas::mem::Node0::ForEachSuffix(const cas::mem::SuffixIterator&) const {
-  // NO-OP
+void cas::mem::Node0::ForEachSuffix(const cas::mem::SuffixIterator& callback) const {
+  for (const auto& suffix : suffixes_) {
+    callback(suffix);
+  }
 }
 
 

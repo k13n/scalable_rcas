@@ -16,6 +16,9 @@ public:
   int NodeWidth() const override {
     return 256;
   };
+  size_t NrSuffixes() const override {
+    return 0;
+  }
 
   // traversing
   Node* LocateChild(uint8_t key_byte) const override;
