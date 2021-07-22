@@ -1,7 +1,8 @@
 #pragma once
 
+#include "cas/inode.hpp"
 #include "cas/key_encoding.hpp"
-#include "cas/node_reader.hpp"
+#include "cas/key_decoder.hpp"
 #include "cas/pager.hpp"
 #include "cas/path_matcher.hpp"
 #include "cas/query_stats.hpp"
@@ -28,12 +29,18 @@ const cas::BinaryKeyEmitter kNullEmitter = [&](
       cas::ref_t /* ref */) -> void {
 };
 
+const cas::BinaryKeyEmitter kPrintEmitter = [&](
+      const cas::QueryBuffer& path, size_t p_len,
+      const cas::QueryBuffer& value, size_t v_len,
+      cas::ref_t ref) -> void {
+  KeyDecoder<cas::vint64_t>::Decode(path, p_len, value, v_len, ref).Dump();
+};
 
-template<class VType>
+
 class Query {
   struct State {
     bool is_root_;
-    size_t idx_position_ = 0;
+    const INode* node_;
     Dimension parent_dimension_;
     std::byte parent_byte_ = cas::kNullByte;
     // length of the prefixes matched so far
@@ -49,18 +56,16 @@ class Query {
     void Dump() const;
   };
 
-  /* cas::LRUCache lru; */
-  const uint8_t* file_;
+  const INode* root_;
   const BinarySK& key_;
   const BinaryKeyEmitter& emitter_;
   std::unique_ptr<QueryBuffer> buf_pat_;
   std::unique_ptr<QueryBuffer> buf_val_;
-  std::deque<State> stack_;
   QueryStats stats_;
 
 
 public:
-  Query(const uint8_t* file,
+  Query(const INode* root,
       const BinarySK& key,
       const BinaryKeyEmitter& emitter);
 
@@ -71,19 +76,19 @@ public:
   }
 
 private:
-  void EvaluateInnerNode(State& s, const cas::NodeReader& node);
-  void EvaluateLeafNode(State& s, const cas::NodeReader& node);
-  void PrepareBuffer(State& s, const cas::NodeReader& node);
+  void EvaluateQuery(State& s);
+  void EvaluateInnerNode(State& s, const cas::INode* node);
+  void EvaluateLeafNode(State& s, const cas::INode* node);
+  void PrepareBuffer(State& s, const cas::INode* node);
   path_matcher::PrefixMatch MatchPathPrefix(State& s);
   path_matcher::PrefixMatch MatchValuePrefix(State& s);
-  void Descend(const State& s, const cas::NodeReader& node);
-  void DescendPathNode(const State& s, const cas::NodeReader& node);
-  void DescendValueNode(const State& s, const cas::NodeReader& node);
-  void DescendNode(const State& s, const cas::NodeReader& node,
+  void Descend(const State& s, const cas::INode* node);
+  void DescendPathNode(const State& s, const cas::INode* node);
+  void DescendValueNode(const State& s, const cas::INode* node);
+  void DescendNode(const State& s, const cas::INode* node,
       std::byte low, std::byte high);
-  bool IsCompleteValue(State& s);
   void EmitMatch(const State& s, const cas::ref_t& ref);
-  void UpdateStats(const cas::NodeReader& node);
+  void UpdateStats(const cas::INode* node);
   void DumpState(State& s);
 };
 

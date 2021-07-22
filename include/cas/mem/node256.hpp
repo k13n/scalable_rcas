@@ -22,8 +22,7 @@ public:
 
   // traversing
   Node* LocateChild(uint8_t key_byte) const override;
-  void ForEachChild(uint8_t low, uint8_t high, const ChildIterator& callback) const override;
-  void ForEachSuffix(const SuffixIterator& callback) const override;
+  void ForEachChild(const ChildCallback& callback) const override;
 
   // updating
   void Put(uint8_t key_byte, Node* child) override;

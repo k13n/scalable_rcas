@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cas/dimension.hpp"
+#include "cas/inode.hpp"
 #include "cas/types.hpp"
 #include "cas/util.hpp"
 #include <cstddef>
@@ -12,30 +13,27 @@
 namespace cas {
 
 
-class NodeReader {
+class NodeReader : public INode {
   static constexpr int POS_D = 0;
   static constexpr int POS_LEN_PV = 1;
   static constexpr int POS_M = 3;
   static constexpr int POS_P = 5;
 
+  const uint8_t* head_;
   const uint8_t* buffer_;
 
 public:
 
-  using ChildCallback = std::function<void(uint8_t byte, size_t pos)>;
-  using SuffixCallback = std::function<void(
-      uint16_t len_p, const uint8_t* path,
-      uint16_t len_v, const uint8_t* value,
-      cas::ref_t ref)>;
+  NodeReader(const uint8_t* head, size_t pos)
+    : head_{head}
+    , buffer_{head + pos}
+  {}
 
-
-  NodeReader(const uint8_t* buffer) : buffer_{buffer} {};
-
-  inline cas::Dimension Dimension() const {
+  inline cas::Dimension Dimension() const override {
     return static_cast<cas::Dimension>(buffer_[POS_D]);
   }
 
-  inline uint16_t LenPath() const {
+  inline size_t LenPath() const override {
     uint16_t data = 0;
     data |= static_cast<uint16_t>(buffer_[POS_LEN_PV]   << 8);
     data |= static_cast<uint16_t>(buffer_[POS_LEN_PV+1] << 0);
@@ -43,7 +41,7 @@ public:
     return plen;
   }
 
-  inline uint16_t LenValue() const {
+  inline size_t LenValue() const override {
     uint16_t data = 0;
     data |= static_cast<uint16_t>(buffer_[POS_LEN_PV]   << 8);
     data |= static_cast<uint16_t>(buffer_[POS_LEN_PV+1] << 0);
@@ -51,42 +49,34 @@ public:
     return vlen;
   }
 
-  inline uint16_t NrEntries() const {
+  inline size_t NrEntries() const {
     uint16_t result = 0;
     result |= static_cast<uint16_t>(buffer_[POS_M]   << 8);
     result |= static_cast<uint16_t>(buffer_[POS_M+1] << 0);
     return result;
   }
 
-  inline uint16_t NrChildren() const {
+  inline size_t NrChildren() const override {
     return Dimension() == cas::Dimension::LEAF
       ? 0
       : NrEntries();
   }
 
-  inline uint16_t NrSuffixes() const {
+  inline size_t NrSuffixes() const override {
     return Dimension() == cas::Dimension::LEAF
       ? NrEntries()
       : 0;
   }
 
-  inline const uint8_t* Path() const {
+  inline const uint8_t* Path() const override {
     return &buffer_[POS_P];
   }
 
-  inline const uint8_t* Value() const {
+  inline const uint8_t* Value() const override {
     return &buffer_[POS_P + LenPath()];
   }
 
-  inline bool IsInnerNode() const {
-    return Dimension() != cas::Dimension::LEAF;
-  }
-
-  inline bool IsLeaf() const {
-    return Dimension() == cas::Dimension::LEAF;
-  }
-
-  void ForEachChild(const ChildCallback& callback) const {
+  void ForEachChild(const INode::ChildCallback& callback) const override {
     size_t offset = POS_P + LenPath() + LenValue();
     for (uint16_t i = 0, sz = NrChildren(); i < sz; ++i) {
       uint8_t b = buffer_[offset++];
@@ -97,11 +87,12 @@ public:
       ptr |= (static_cast<size_t>(buffer_[offset++]) << 16);
       ptr |= (static_cast<size_t>(buffer_[offset++]) <<  8);
       ptr |= (static_cast<size_t>(buffer_[offset++]) <<  0);
-      callback(b, ptr);
+      NodeReader node{head_, ptr};
+      callback(b, &node);
     }
   }
 
-  void ForEachSuffix(const SuffixCallback& callback) const {
+  void ForEachSuffix(const INode::SuffixCallback& callback) const override {
     size_t offset = POS_P + LenPath() + LenValue();
     for (uint16_t i = 0, sz = NrSuffixes(); i < sz; ++i) {
       uint16_t len_data = 0;
@@ -145,8 +136,9 @@ public:
     } else {
       std::cout << "NrChildren: " << NrChildren() << "\n";
       int i = 0;
-      ForEachChild([&i](uint8_t byte, size_t pos) -> void {
-        printf("  [%3d] 0x%02X --> %ld\n", ++i, byte, pos);
+      ForEachChild([&i](uint8_t byte, INode* child) -> void {
+        auto c = static_cast<NodeReader*>(child);
+        printf("  [%3d] 0x%02X --> %ld\n", ++i, byte, c->buffer_ - c->head_);
       });
     }
   }

@@ -1,6 +1,5 @@
 #include "cas/bulk_loader.hpp"
 #include "cas/key_encoder.hpp"
-#include "cas/record.hpp"
 #include "cas/util.hpp"
 #include <algorithm>
 #include <cassert>
@@ -242,12 +241,10 @@ void cas::BulkLoader<VType, PAGE_SZ>::ConstructLeafNode(
       if (dsc_v < key.LenValue()) {
         new_len_v = key.LenValue() - dsc_v;
       }
-      lkey.path_.reserve(new_len_p);
-      lkey.value_.reserve(new_len_v);
-      std::copy(key.Path() + dsc_p, key.Path() + key.LenPath(),
-          std::back_inserter(lkey.path_));
-      std::copy(key.Value() + dsc_v, key.Value() + key.LenValue(),
-          std::back_inserter(lkey.value_));
+      lkey.path_.resize(new_len_p);
+      lkey.value_.resize(new_len_v);
+      std::memcpy(&lkey.path_[0], key.Path() + dsc_p, new_len_p);
+      std::memcpy(&lkey.value_[0], key.Value() + dsc_v, new_len_v);
       lkey.ref_ = key.Ref();
       node.suffixes_.push_back(lkey);
     }

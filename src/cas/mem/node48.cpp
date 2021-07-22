@@ -10,19 +10,12 @@ cas::mem::Node48::Node48(cas::Dimension dimension)
 }
 
 
-void cas::mem::Node48::ForEachChild(
-      uint8_t low, uint8_t high,
-      const cas::mem::ChildIterator& callback) const {
-  for (int i = low; i <= high; ++i) {
+void cas::mem::Node48::ForEachChild(const cas::INode::ChildCallback& callback) const {
+  for (int i = 0x00; i <= 0xFF; ++i) {
     if (indexes_[i] != cas::mem::kEmptyIndex) {
       callback(static_cast<uint8_t>(i), children_[indexes_[i]]);
     }
   }
-}
-
-
-void cas::mem::Node48::ForEachSuffix(const cas::mem::SuffixIterator&) const {
-  // NO-OP
 }
 
 

@@ -11,19 +11,10 @@ cas::mem::Node4::Node4(cas::Dimension dimension)
 }
 
 
-void cas::mem::Node4::ForEachChild(
-      uint8_t low, uint8_t high,
-      const cas::mem::ChildIterator& callback) const {
+void cas::mem::Node4::ForEachChild(const cas::INode::ChildCallback& callback) const {
   for (int i = 0; i < nr_children_; ++i) {
-    if (low <= keys_[i] && keys_[i] <= high) {
-      callback(keys_[i], children_[i]);
-    }
+    callback(keys_[i], children_[i]);
   }
-}
-
-
-void cas::mem::Node4::ForEachSuffix(const cas::mem::SuffixIterator&) const {
-  // NO-OP
 }
 
 

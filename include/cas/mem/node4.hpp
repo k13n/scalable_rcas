@@ -14,17 +14,16 @@ public:
   Node4(cas::Dimension dimension);
 
   // meta information
-  int NodeWidth() const override {
+  inline int NodeWidth() const override {
     return 4;
   };
-  size_t NrSuffixes() const override {
+  inline size_t NrSuffixes() const override {
     return 0;
   }
 
   // traversing
   Node* LocateChild(uint8_t key_byte) const override;
-  void ForEachChild(uint8_t low, uint8_t high, const ChildIterator& callback) const override;
-  void ForEachSuffix(const SuffixIterator& callback) const override;
+  void ForEachChild(const ChildCallback& callback) const override;
 
   // updating
   void Put(uint8_t key_byte, Node* child) override;

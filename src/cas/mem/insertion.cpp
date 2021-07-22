@@ -146,10 +146,10 @@ void cas::mem::Insertion::Execute() {
     // add another suffix to the existing leaf
     cas::MemoryKey suffix;
     for (size_t i = gP; i < bkey_.LenPath(); ++i) {
-      suffix.path_.push_back(bkey_.Path()[i]);
+      suffix.path_.push_back(static_cast<uint8_t>(bkey_.Path()[i]));
     }
     for (size_t i = gV; i < bkey_.LenValue(); ++i) {
-      suffix.value_.push_back(bkey_.Value()[i]);
+      suffix.value_.push_back(static_cast<uint8_t>(bkey_.Value()[i]));
     }
     suffix.ref_ = bkey_.Ref();
     leaf->suffixes_.push_back(suffix);
@@ -275,15 +275,15 @@ void cas::mem::Insertion::LazilyRestructureLeafNode(
 {
   // a part of the node's prefixes becomes discriminative. we must push
   // everything after the discriminative part to the suffixes
-  std::vector<std::byte> buffer1;
+  std::vector<uint8_t> buffer1;
   for (auto& suffix : node->suffixes_) {
     // push discriminative path part to path suffix
     if (iP < node->LenPath()) {
       buffer1.clear();
       for (size_t i = iP; i < node->LenPath(); ++i) {
-        buffer1.push_back(static_cast<std::byte>(node->Path()[i]));
+        buffer1.push_back(node->Path()[i]);
       }
-      for (std::byte byte : suffix.path_) {
+      for (uint8_t byte : suffix.path_) {
         buffer1.push_back(byte);
       }
       suffix.path_ = buffer1;
@@ -292,9 +292,9 @@ void cas::mem::Insertion::LazilyRestructureLeafNode(
     if (iV < node->LenValue()) {
       buffer1.clear();
       for (size_t i = iV; i < node->LenValue(); ++i) {
-        buffer1.push_back(static_cast<std::byte>(node->Value()[i]));
+        buffer1.push_back(node->Value()[i]);
       }
-      for (std::byte byte : suffix.value_) {
+      for (uint8_t byte : suffix.value_) {
         buffer1.push_back(byte);
       }
       suffix.value_ = buffer1;
@@ -315,10 +315,10 @@ void cas::mem::Insertion::LazilyRestructureLeafNode(
   // add the new key to the suffixes
   cas::MemoryKey suffix;
   for (size_t i = gP; i < bkey_.LenPath(); ++i) {
-    suffix.path_.push_back(bkey_.Path()[i]);
+    suffix.path_.push_back(static_cast<uint8_t>(bkey_.Path()[i]));
   }
   for (size_t i = gV; i < bkey_.LenValue(); ++i) {
-    suffix.value_.push_back(bkey_.Value()[i]);
+    suffix.value_.push_back(static_cast<uint8_t>(bkey_.Value()[i]));
   }
   suffix.ref_ = bkey_.Ref();
   node->suffixes_.push_back(suffix);
@@ -358,7 +358,7 @@ cas::mem::Node* cas::mem::Insertion::LazilyRestructureNode(
   intermediate_parent->separator_pos_ = iP;
 
   // update node's prefixes, remove common bytes
-  uint8_t node_byte;
+  uint8_t node_byte = 0x00;
   switch (dimension) {
     case cas::Dimension::PATH:
       node_byte = node->Path()[iP];
@@ -382,7 +382,7 @@ cas::mem::Node* cas::mem::Insertion::LazilyRestructureNode(
   node->prefixes_ = buffer;
 
   // create new leaf node for new key
-  uint8_t leaf_byte;
+  uint8_t leaf_byte = 0x00;
   switch (dimension) {
     case cas::Dimension::PATH:
       leaf_byte = static_cast<uint8_t>(bkey_.Path()[gP]);

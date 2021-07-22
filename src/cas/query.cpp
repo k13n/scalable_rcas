@@ -9,12 +9,11 @@
 #include <list>
 
 
-template<class VType>
-cas::Query<VType>::Query(
-        const uint8_t* file,
+cas::Query::Query(
+        const INode* root,
         const cas::BinarySK& key,
         const cas::BinaryKeyEmitter& emitter)
-    : file_(file)
+    : root_(root)
     , key_(key)
     , emitter_(emitter)
     , buf_pat_(std::make_unique<QueryBuffer>())
@@ -22,12 +21,11 @@ cas::Query<VType>::Query(
 {}
 
 
-template<class VType>
-void cas::Query<VType>::Execute() {
+void cas::Query::Execute() {
   const auto& t_start = std::chrono::high_resolution_clock::now();
   State initial_state = {
     .is_root_ = true,
-    .idx_position_ = 0,
+    .node_ = root_,
     .parent_dimension_ = cas::Dimension::PATH, // doesn't matter
     .parent_byte_ = cas::kNullByte,
     .len_pat_ = 0,
@@ -36,31 +34,25 @@ void cas::Query<VType>::Execute() {
     .vl_pos_ = 0,
     .vh_pos_ = 0,
   };
-  stack_.push_back(initial_state);
-
-  while (!stack_.empty()) {
-    State s = stack_.back();
-    stack_.pop_back();
-
-    cas::NodeReader node{file_ + s.idx_position_};
-    UpdateStats(node);
-    PrepareBuffer(s, node);
-
-    if (node.IsInnerNode()) {
-      EvaluateInnerNode(s, node);
-    } else {
-      EvaluateLeafNode(s, node);
-    }
-  }
-
+  EvaluateQuery(initial_state);
   const auto& t_end = std::chrono::high_resolution_clock::now();
   stats_.runtime_mus_ =
     std::chrono::duration_cast<std::chrono::microseconds>(t_end-t_start).count();
 }
 
 
-template<class VType>
-void cas::Query<VType>::EvaluateInnerNode(State& s, const NodeReader& node) {
+void cas::Query::EvaluateQuery(State& s) {
+  UpdateStats(s.node_);
+  PrepareBuffer(s, s.node_);
+  if (s.node_->IsInnerNode()) {
+    EvaluateInnerNode(s, s.node_);
+  } else {
+    EvaluateLeafNode(s, s.node_);
+  }
+}
+
+
+void cas::Query::EvaluateInnerNode(State& s, const INode* node) {
   cas::path_matcher::PrefixMatch match_pat = MatchPathPrefix(s);
   cas::path_matcher::PrefixMatch match_val = MatchValuePrefix(s);
   if (match_pat == path_matcher::PrefixMatch::MATCH &&
@@ -74,10 +66,8 @@ void cas::Query<VType>::EvaluateInnerNode(State& s, const NodeReader& node) {
 }
 
 
-
-template<class VType>
-void cas::Query<VType>::EvaluateLeafNode(State& s,
-    const NodeReader& node) {
+void cas::Query::EvaluateLeafNode(State& s,
+    const INode* node) {
   cas::path_matcher::PrefixMatch match_pat = MatchPathPrefix(s);
   cas::path_matcher::PrefixMatch match_val = MatchValuePrefix(s);
 
@@ -89,7 +79,7 @@ void cas::Query<VType>::EvaluateLeafNode(State& s,
   }
 
   // check for each suffix if it matches
-  node.ForEachSuffix([&](
+  node->ForEachSuffix([&](
         uint16_t len_p, const uint8_t* path,
         uint16_t len_v, const uint8_t* value,
         cas::ref_t ref){
@@ -109,8 +99,7 @@ void cas::Query<VType>::EvaluateLeafNode(State& s,
 }
 
 
-template<class VType>
-void cas::Query<VType>::EmitMatch(const State& s,
+void cas::Query::EmitMatch(const State& s,
       const cas::ref_t& ref) {
   ++stats_.nr_matches_;
   stats_.sum_depth_ += s.depth_;
@@ -118,10 +107,9 @@ void cas::Query<VType>::EmitMatch(const State& s,
 }
 
 
-template<class VType>
-void cas::Query<VType>::UpdateStats(const NodeReader& node) {
+void cas::Query::UpdateStats(const INode* node) {
   ++stats_.read_nodes_;
-  switch (node.Dimension()) {
+  switch (node->Dimension()) {
   case cas::Dimension::PATH:
     ++stats_.read_path_nodes_;
     break;
@@ -135,8 +123,7 @@ void cas::Query<VType>::UpdateStats(const NodeReader& node) {
 }
 
 
-template<class VType>
-void cas::Query<VType>::PrepareBuffer(State& s, const cas::NodeReader& node) {
+void cas::Query::PrepareBuffer(State& s, const cas::INode* node) {
   if (!s.is_root_) {
     switch (s.parent_dimension_) {
     case cas::Dimension::PATH:
@@ -152,24 +139,22 @@ void cas::Query<VType>::PrepareBuffer(State& s, const cas::NodeReader& node) {
       break;
     }
   }
-  std::memcpy(&buf_pat_->at(s.len_pat_), node.Path(), node.LenPath());
-  std::memcpy(&buf_val_->at(s.len_val_), node.Value(), node.LenValue());
-  s.len_pat_ += node.LenPath();
-  s.len_val_ += node.LenValue();
+  std::memcpy(&buf_pat_->at(s.len_pat_), node->Path(),  node->LenPath());
+  std::memcpy(&buf_val_->at(s.len_val_), node->Value(), node->LenValue());
+  s.len_pat_ += node->LenPath();
+  s.len_val_ += node->LenValue();
 }
 
 
-template<class VType>
 cas::path_matcher::PrefixMatch
-cas::Query<VType>::MatchPathPrefix(State& s) {
+cas::Query::MatchPathPrefix(State& s) {
   return cas::path_matcher::MatchPathIncremental(*buf_pat_, key_.path_,
       s.len_pat_, s.pm_state_);
 }
 
 
-template<class VType>
 cas::path_matcher::PrefixMatch
-cas::Query<VType>::MatchValuePrefix(State& s) {
+cas::Query::MatchValuePrefix(State& s) {
   // match as much as possible of key_.low_
   while (s.vl_pos_ < key_.low_.size() &&
          s.vl_pos_ < s.len_val_ &&
@@ -195,14 +180,16 @@ cas::Query<VType>::MatchValuePrefix(State& s) {
     return path_matcher::PrefixMatch::MISMATCH;
   }
 
-  return IsCompleteValue(s) ? path_matcher::PrefixMatch::MATCH
-                            : path_matcher::PrefixMatch::INCOMPLETE;
+  // TODO: here we assume the values are 64 bit numbers
+  bool is_complete_value = s.len_val_ == sizeof(cas::vint64_t);
+
+  return is_complete_value ? path_matcher::PrefixMatch::MATCH
+                           : path_matcher::PrefixMatch::INCOMPLETE;
 }
 
 
-template<class VType>
-void cas::Query<VType>::Descend(const State& s, const cas::NodeReader& node) {
-  switch (node.Dimension()) {
+void cas::Query::Descend(const State& s, const cas::INode* node) {
+  switch (node->Dimension()) {
   case cas::Dimension::PATH:
     DescendPathNode(s, node);
     break;
@@ -215,8 +202,7 @@ void cas::Query<VType>::Descend(const State& s, const cas::NodeReader& node) {
 }
 
 
-template<class VType>
-void cas::Query<VType>::DescendPathNode(const State& s, const cas::NodeReader& node) {
+void cas::Query::DescendPathNode(const State& s, const cas::INode* node) {
   // default is to descend all children of s.node_
   std::byte low{0x00};
   std::byte high{0xFF};
@@ -231,23 +217,21 @@ void cas::Query<VType>::DescendPathNode(const State& s, const cas::NodeReader& n
 }
 
 
-template<class VType>
-void cas::Query<VType>::DescendValueNode(const State& s, const cas::NodeReader& node) {
+void cas::Query::DescendValueNode(const State& s, const cas::INode* node) {
   std::byte low  = (s.vl_pos_ == s.len_val_) ? key_.low_[s.vl_pos_]  : std::byte{0x00};
   std::byte high = (s.vh_pos_ == s.len_val_) ? key_.high_[s.vh_pos_] : std::byte{0xFF};
   DescendNode(s, node, low, high);
 }
 
 
-template<class VType>
-void cas::Query<VType>::DescendNode(const State& s,
-    const cas::NodeReader& node, std::byte low, std::byte high) {
-  node.ForEachChild([&](uint8_t byte, size_t child_pos){
+void cas::Query::DescendNode(const State& s,
+    const cas::INode* node, std::byte low, std::byte high) {
+  node->ForEachChild([&](uint8_t byte, cas::INode* child){
     if (static_cast<uint8_t>(low) <= byte && byte <= static_cast<uint8_t>(high)) {
       State copy = {
         .is_root_          = false,
-        .idx_position_     = child_pos,
-        .parent_dimension_ = node.Dimension(),
+        .node_             = child,
+        .parent_dimension_ = node->Dimension(),
         .parent_byte_      = static_cast<std::byte>(byte),
         .len_pat_          = s.len_pat_,
         .len_val_          = s.len_val_,
@@ -256,16 +240,14 @@ void cas::Query<VType>::DescendNode(const State& s,
         .vh_pos_           = s.vh_pos_,
         .depth_            = s.depth_ + 1,
       };
-      stack_.push_back(std::move(copy));
+      EvaluateQuery(copy);
     }
   });
 }
 
 
-template<class VType>
-void cas::Query<VType>::State::Dump() const {
+void cas::Query::State::Dump() const {
   std::cout << "(QueryState)";
-  std::cout << "\nidx_position_: " << idx_position_;
   std::cout << "\nparent_dimension_: ";
   switch (parent_dimension_) {
   case cas::Dimension::PATH:
@@ -289,8 +271,7 @@ void cas::Query<VType>::State::Dump() const {
 }
 
 
-template<class VType>
-void cas::Query<VType>::DumpState(State& s) {
+void cas::Query::DumpState(State& s) {
   std::cout << "(Query)";
   std::cout << "\nbuf_pat_: ";
   cas::util::DumpHexValues(*buf_pat_, s.len_pat_);
@@ -299,13 +280,3 @@ void cas::Query<VType>::DumpState(State& s) {
   std::cout << "\nState:" << "\n";
   s.Dump();
 }
-
-
-template<>
-bool cas::Query<cas::vint64_t>::IsCompleteValue(State& s) {
-  return s.len_val_ == sizeof(cas::vint64_t);
-}
-
-
-// explicit instantiations to separate header from implementation
-template class cas::Query<cas::vint64_t>;

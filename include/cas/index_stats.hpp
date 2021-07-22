@@ -2,7 +2,6 @@
 
 #include "cas/pager.hpp"
 #include "cas/histogram.hpp"
-#include "cas/record.hpp"
 #include "cas/key_encoding.hpp"
 #include <map>
 #include <set>
@@ -45,13 +44,6 @@ public:
   IndexStats(Pager<PAGE_SZ>& pager);
   void Compute();
   void Dump();
-
-private:
-  std::pair<cas::Record,bool> FetchRecord(const State& s);
-
-  static void CopyFromPage(
-      const cas::IdxPage<PAGE_SZ>& page,
-      uint16_t& offset, void* dst, size_t count);
 };
 
 } // namespace cas

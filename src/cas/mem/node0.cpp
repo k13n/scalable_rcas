@@ -25,14 +25,12 @@ cas::mem::Node0::Node0(const cas::BinaryKey& bkey,
 
 
 
-void cas::mem::Node0::ForEachChild(
-      uint8_t /* low */, uint8_t /* high */,
-      const cas::mem::ChildIterator& /* callback */) const {
+void cas::mem::Node0::ForEachChild(const cas::INode::ChildCallback& /* callback */) const {
   // NO-OP
 }
 
 
-void cas::mem::Node0::ForEachSuffix(const cas::mem::SuffixIterator& callback) const {
+void cas::mem::Node0::ForEachSimpleSuffix(const SimpleSuffixCallback& callback) const {
   for (const auto& suffix : suffixes_) {
     callback(suffix);
   }

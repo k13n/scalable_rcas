@@ -38,7 +38,7 @@ void benchmark::ExpQuerying<VType>::Execute() {
           cas::ref_t ref) -> void {
         cas::ToString(ref);
       };
-      cas::QueryExecutor<VType> query{index_file_};
+      cas::QueryExecutor query{index_file_};
       auto stats = query.Execute(search_key, emitter);
       results_.push_back(stats);
     }

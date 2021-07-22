@@ -4,7 +4,6 @@
 
 namespace cas {
 
-template<class VType>
 class QueryExecutor {
   const std::string idx_filename_;
 

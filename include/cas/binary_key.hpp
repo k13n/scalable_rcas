@@ -9,8 +9,8 @@ namespace cas {
 
 
 struct MemoryKey {
-  std::vector<std::byte> path_;
-  std::vector<std::byte> value_;
+  std::vector<uint8_t> path_;
+  std::vector<uint8_t> value_;
   cas::ref_t ref_;
 };
 
