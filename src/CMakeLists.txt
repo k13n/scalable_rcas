@@ -5,6 +5,7 @@ add_library(cas
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/bulk_loader.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/bulk_loader_stats.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/dimension.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cas/index.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/index_stats.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/histogram.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/key.cpp

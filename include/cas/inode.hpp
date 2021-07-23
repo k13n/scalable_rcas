@@ -11,6 +11,8 @@ namespace cas {
 class INode {
 public:
 
+  virtual ~INode() = default;
+
   // meta information
   virtual cas::Dimension Dimension() const = 0;
   virtual size_t LenPath() const = 0;

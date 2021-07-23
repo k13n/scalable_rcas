@@ -52,8 +52,8 @@ public:
   /* Getters/Setters */
   void DscP(int dsc_p) { dsc_p_ = dsc_p; }
   void DscV(int dsc_v) { dsc_v_ = dsc_v; }
-  int DscP() { return dsc_p_; }
-  int DscV() { return dsc_v_; }
+  int DscP() const { return dsc_p_; }
+  int DscV() const { return dsc_v_; }
   void FptrCursorFirstPageNr(size_t val) {
     fptr_cursor_first_page_nr_ = val;
   }
@@ -63,8 +63,11 @@ public:
   void IsRootPartition(bool is_root_partition) {
     is_root_partition_ = is_root_partition;
   }
-  bool IsRootPartition() {
+  bool IsRootPartition() const {
     return is_root_partition_;
+  }
+  BulkLoaderStats& Stats() const {
+    return stats_;
   }
 
   inline size_t& NrKeys() { return nr_keys_; }

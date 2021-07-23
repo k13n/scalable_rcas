@@ -63,13 +63,11 @@ void benchmark::ExpQuerying<VType>::PrintOutput() {
   std::cout << "\n";
 
   double runtime_mus = 0;
-  double page_reads = 0;
   double read_nodes = 0;
   double nr_matches = 0;
 
   for (const auto& stat : results_) {
     runtime_mus += stat.runtime_mus_;
-    page_reads += stat.page_reads_;
     read_nodes += stat.read_nodes_;
     nr_matches += stat.nr_matches_;
   }
@@ -81,14 +79,12 @@ void benchmark::ExpQuerying<VType>::PrintOutput() {
   std::cout << std::fixed << "runtime_mus: " << runtime_mus << "\n";
   std::cout << std::fixed << "runtime_ms: " << runtime_ms << "\n";
   std::cout << std::fixed << "runtime_s: " << runtime_s << "\n";
-  std::cout << std::fixed << "page_reads: " << page_reads << "\n";
   std::cout << std::fixed << "read_nodes: " << read_nodes << "\n";
   std::cout << std::fixed << "nr_matches: " << nr_matches << "\n";
 
   runtime_mus /= results_.size();
   runtime_ms /= results_.size();
   runtime_s /= results_.size();
-  page_reads /= results_.size();
   read_nodes /= results_.size();
   nr_matches /= results_.size();
 
@@ -96,7 +92,6 @@ void benchmark::ExpQuerying<VType>::PrintOutput() {
   std::cout << std::fixed << "runtime_mus: " << runtime_mus << "\n";
   std::cout << std::fixed << "runtime_ms: " << runtime_ms << "\n";
   std::cout << std::fixed << "runtime_s: " << runtime_s << "\n";
-  std::cout << std::fixed << "page_reads: " << page_reads << "\n";
   std::cout << std::fixed << "read_nodes: " << read_nodes << "\n";
   std::cout << std::fixed << "nr_matches: " << nr_matches << "\n";
 

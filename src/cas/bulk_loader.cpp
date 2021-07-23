@@ -91,6 +91,57 @@ void cas::BulkLoader<VType, PAGE_SZ>::Load() {
 }
 
 
+
+template<class VType, size_t PAGE_SZ>
+void cas::BulkLoader<VType, PAGE_SZ>::Load(cas::Partition<PAGE_SZ>& partition) {
+  start_time_global = std::chrono::high_resolution_clock::now();
+
+  // delete the index file if it already exists
+  pager_.Clear();
+
+  // Compute the root's discriminative byte
+  auto start_time_dsc = std::chrono::high_resolution_clock::now();
+  if (context_.use_root_dsc_bytes_) {
+    partition.DscP(context_.root_dsc_P_);
+    partition.DscV(context_.root_dsc_V_);
+  } else {
+    switch (context_.dsc_computation_) {
+      case cas::DscComputation::Proactive:
+      case cas::DscComputation::TwoPass:
+        DscByte(partition);
+        break;
+      case cas::DscComputation::ByteByByte:
+        DscByteByByte(partition);
+        break;
+      default:
+        throw std::runtime_error{"unknown DscComputation"};
+    }
+  }
+  cas::util::AddToTimer(stats_.runtime_dsc_computation_, start_time_dsc);
+
+  // update stats
+  stats_ = partition.Stats();
+  stats_.root_partition_bytes_read_ = stats_.partition_bytes_read_;
+  stats_.root_partition_bytes_written_ = stats_.partition_bytes_written_;
+  stats_.partition_bytes_read_ = 0;
+  stats_.partition_bytes_written_ = 0;
+
+  // check that the input/output pages are fully available
+  assert(mpool_.input_.Full());
+  assert(mpool_.output_.Full());
+
+  // time it takes to prepare the root partition
+  cas::util::AddToTimer(stats_.runtime_root_partition_, start_time_global);
+
+  // construct the index
+  auto construct_start = std::chrono::high_resolution_clock::now();
+  Construct(partition, cas::Dimension::VALUE, cas::Dimension::LEAF, 0, 0);
+  cas::util::AddToTimer(stats_.runtime_construction_, construct_start);
+
+  cas::util::AddToTimer(stats_.runtime_, start_time_global);
+}
+
+
 template<class VType, size_t PAGE_SZ>
 size_t cas::BulkLoader<VType, PAGE_SZ>::Construct(
           cas::Partition<PAGE_SZ>& partition,
@@ -477,7 +528,7 @@ void cas::BulkLoader<VType, PAGE_SZ>::PsiPartition(
     cas::util::AddToTimer(stats_.runtime_partitioning_hybrid_, start, end);
   }
   // delete the disk-based keys in the original partition
-  if (!partition.IsRootPartition()) {
+  if (context_.delete_root_partition_ || !partition.IsRootPartition()) {
     partition.DeleteFile();
   }
 }

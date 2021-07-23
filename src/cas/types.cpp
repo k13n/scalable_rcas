@@ -2,19 +2,6 @@
 #include <stdexcept>
 
 
-std::string cas::ToString(ClusteringAlgorithm v) {
-  switch (v) {
-    case ClusteringAlgorithm::RS:
-      return "RS";
-    case ClusteringAlgorithm::FDW:
-      return "FDW";
-    default:
-      throw std::runtime_error{"unknown ClusteringAlgorithm"};
-  }
-  return "";
-}
-
-
 std::string cas::ToString(MemoryPlacement v){
   switch (v) {
     case MemoryPlacement::FrontLoading:

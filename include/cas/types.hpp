@@ -47,14 +47,6 @@ const size_t QUERY_BUFFER_SIZE = 10000;
 using QueryBuffer = std::array<std::byte, QUERY_BUFFER_SIZE>;
 
 
-// node clustering algorithm
-// - RS: right sibling [Kanne et al. IBM Systems Journal '06]
-// - FDW: flat tree, dynamic programming for tree width [Kanne et al. VLDB'06]
-enum class ClusteringAlgorithm {
-  RS,
-  FDW
-};
-
 enum class MemoryPlacement {
   FrontLoading,
   Uniform,
@@ -69,7 +61,6 @@ enum class DscComputation {
 };
 
 
-std::string ToString(ClusteringAlgorithm v);
 std::string ToString(MemoryPlacement v);
 std::string ToString(DscComputation v);
 

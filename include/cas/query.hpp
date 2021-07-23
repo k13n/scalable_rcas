@@ -58,7 +58,7 @@ class Query {
 
   const INode* root_;
   const BinarySK& key_;
-  const BinaryKeyEmitter& emitter_;
+  const BinaryKeyEmitter emitter_;
   std::unique_ptr<QueryBuffer> buf_pat_;
   std::unique_ptr<QueryBuffer> buf_val_;
   QueryStats stats_;
@@ -67,7 +67,7 @@ class Query {
 public:
   Query(const INode* root,
       const BinarySK& key,
-      const BinaryKeyEmitter& emitter);
+      const BinaryKeyEmitter emitter);
 
   void Execute();
 

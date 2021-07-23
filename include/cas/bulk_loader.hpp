@@ -43,6 +43,7 @@ class BulkLoader {
 public:
   BulkLoader(Pager<PAGE_SZ>& pager, const Context& context);
   void Load();
+  void Load(Partition<PAGE_SZ>& partition);
   BulkLoaderStats& Stats() { return stats_; }
 
 private:

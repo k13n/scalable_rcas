@@ -16,9 +16,7 @@ void benchmark::ExpStructure<VType, PAGE_SZ>::Execute() {
   cas::util::Log("Experiment ExpStructure\n\n");
 
   // configuration
-  context_.compute_page_utilization_ = true;
   context_.compute_fanout_ = true;
-  context_.compute_nodes_per_page_ = true;
 
   // print input
   cas::util::Log("Configuration\n");

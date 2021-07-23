@@ -12,7 +12,7 @@
 cas::Query::Query(
         const INode* root,
         const cas::BinarySK& key,
-        const cas::BinaryKeyEmitter& emitter)
+        const cas::BinaryKeyEmitter emitter)
     : root_(root)
     , key_(key)
     , emitter_(emitter)
