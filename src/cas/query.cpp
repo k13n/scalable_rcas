@@ -22,6 +22,9 @@ cas::Query::Query(
 
 
 void cas::Query::Execute() {
+  if (root_ == nullptr) {
+    return;
+  }
   const auto& t_start = std::chrono::high_resolution_clock::now();
   State initial_state = {
     .is_root_ = true,

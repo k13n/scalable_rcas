@@ -9,7 +9,7 @@ namespace mem {
 
 class Node0 : public Node {
 public:
-  std::vector<cas::MemoryKey> suffixes_;
+  std::vector<cas::ref_t> refs_;
 
   Node0();
   Node0(const BinaryKey& bkey, size_t path_pos, size_t value_pos);
@@ -19,13 +19,13 @@ public:
     return 0;
   };
   size_t NrSuffixes() const override {
-    return suffixes_.size();
+    return refs_.size();
   }
 
   // traversing
   Node* LocateChild(uint8_t key_byte) const override;
   void ForEachChild(const ChildCallback& callback) const override;
-  void ForEachSuffix(const SuffixCallback& callback) const override;
+  void ForEachSuffix(const RefCallback& callback) const override;
 
   // updating
   void Put(uint8_t key_byte, Node* child) override;

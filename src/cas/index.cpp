@@ -22,6 +22,10 @@ void cas::Index<VType, PAGE_SZ>::Insert(cas::BinaryKey key) {
 
 template<class VType, size_t PAGE_SZ>
 void cas::Index<VType, PAGE_SZ>::HandleOverflow() {
+  if (nr_memory_keys_ == 0) {
+    return;
+  }
+
   // create root partition with random name
   std::random_device dev;
   std::mt19937 rng(dev());

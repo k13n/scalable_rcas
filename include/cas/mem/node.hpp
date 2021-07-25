@@ -13,7 +13,7 @@ namespace mem {
 
 class Node : public INode {
 public:
-  using SuffixCallback = std::function<void(const cas::MemoryKey&)>;
+  using RefCallback = std::function<void(const cas::ref_t&)>;
 
   cas::Dimension dimension_;
   uint16_t nr_children_ = 0;
@@ -53,15 +53,13 @@ public:
   virtual Node* Grow() = 0;
   virtual void ReplaceBytePointer(uint8_t key_byte, Node* child) = 0;
 
-  virtual void ForEachSuffix(const SuffixCallback&) const {
+  virtual void ForEachSuffix(const RefCallback&) const {
     // NO-OP
   }
 
   void ForEachSuffix(const cas::INode::SuffixCallback& callback) const override {
-    ForEachSuffix([&](const cas::MemoryKey& suffix) {
-      callback(suffix.path_.size(), &suffix.path_[0],
-               suffix.value_.size(), &suffix.value_[0],
-               suffix.ref_);
+    ForEachSuffix([&](const cas::ref_t& ref) {
+      callback(0, nullptr, 0, nullptr, ref);
     });
   };
 

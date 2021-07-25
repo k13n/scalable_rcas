@@ -18,9 +18,7 @@ cas::mem::Node0::Node0(const cas::BinaryKey& bkey,
   std::memcpy(&prefixes_[0] + len_path, bkey.Value() + value_pos, len_value);
   separator_pos_ = len_path;
   // add the ref
-  cas::MemoryKey memkey;
-  memkey.ref_ = bkey.Ref();
-  suffixes_.push_back(memkey);
+  refs_.push_back(bkey.Ref());
 }
 
 
@@ -30,9 +28,9 @@ void cas::mem::Node0::ForEachChild(const cas::INode::ChildCallback& /* callback 
 }
 
 
-void cas::mem::Node0::ForEachSuffix(const SuffixCallback& callback) const {
-  for (const auto& suffix : suffixes_) {
-    callback(suffix);
+void cas::mem::Node0::ForEachSuffix(const RefCallback& callback) const {
+  for (const auto& ref : refs_) {
+    callback(ref);
   }
 }
 
