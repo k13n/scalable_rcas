@@ -12,13 +12,12 @@ int main_(int argc, char** argv) {
   context.Dump();
 
   // create index
-  cas::Pager<PAGE_SZ> pager{context.index_file_};
-  cas::BulkLoader<VType, PAGE_SZ> bulk_loader{pager, context};
+  cas::BulkLoaderStats stats;
+  cas::BulkLoader<VType, PAGE_SZ> bulk_loader{context, stats};
   bulk_loader.Load();
 
   // print output
   std::cout << "Output:\n";
-  auto stats = bulk_loader.Stats();
   stats.Dump();
 
   return 0;

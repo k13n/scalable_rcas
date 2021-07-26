@@ -1,6 +1,7 @@
 #include <cas/key.hpp>
 #include <cas/key_encoder.hpp>
 #include <cas/query_executor.hpp>
+#include <iostream>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -58,7 +59,7 @@ private:
     skey.Dump();
     bool reverse_paths = false;
     auto bkey = cas::KeyEncoder<cas::vint64_t>::Encode(skey, reverse_paths);
-    cas::QueryExecutor<VType> query{index_file_};
+    cas::QueryExecutor query{index_file_};
     auto stats = query.Execute(bkey, cas::kNullEmitter);
 
     std::cout << "\n";
@@ -70,7 +71,7 @@ private:
   void ExecuteConcise(cas::SearchKey<VType> skey) {
     bool reverse_paths = false;
     auto bkey = cas::KeyEncoder<cas::vint64_t>::Encode(skey, reverse_paths);
-    cas::QueryExecutor<VType> query{index_file_};
+    cas::QueryExecutor query{index_file_};
     auto stats = query.Execute(bkey, cas::kNullEmitter);
 
     std::printf("%10zu (%f)  ",

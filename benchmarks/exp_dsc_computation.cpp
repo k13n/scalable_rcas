@@ -34,10 +34,10 @@ int main(int argc, char** argv) {
   try {
     return main_(argc, argv);
   } catch (std::exception& e) {
-    std::cerr << "Standard exception. What: " << e.what() << "\n";
+    std::cerr << "Standard exception. What: " << e.what() << std::endl;
     return 10;
   } catch (...) {
-    std::cerr << "Unknown exception.\n";
+    std::cerr << "Unknown exception." << std::endl;
     return 11;
   }
 }

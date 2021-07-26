@@ -1,30 +1,21 @@
-#include "benchmark/exp_memory_management.hpp"
+#include "benchmark/exp_insertion.hpp"
 #include "benchmark/option_parser.hpp"
 
 int main_(int argc, char** argv) {
   using VType = cas::vint64_t;
   constexpr auto PAGE_SZ = cas::PAGE_SZ_16KB;
-  using Exp = benchmark::ExpMemoryManagement<VType, PAGE_SZ>;
+  using Exp = benchmark::ExpInsertion<VType, PAGE_SZ>;
 
-  cas::Context context = {
-    .use_direct_io_ = true,
-  };
+  cas::Context context;
   benchmark::option_parser::Parse(argc, argv, context);
 
-  std::vector<cas::MemoryPlacement> approaches = {
-    cas::MemoryPlacement::FrontLoading,
-    cas::MemoryPlacement::AllOrNothing,
+  std::vector<double> bulkload_fractions = {
+    1.0,
+    0.5,
+    0.0,
   };
 
-  std::vector<size_t> memory_sizes = {
-     16'000'000'000,
-     32'000'000'000,
-     64'000'000'000,
-    128'000'000'000,
-    256'000'000'000,
-  };
-
-  Exp bm{context, approaches, memory_sizes};
+  Exp bm{context, bulkload_fractions};
   bm.Execute();
 
   return 0;

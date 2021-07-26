@@ -16,14 +16,14 @@ namespace cas {
 
 template<class VType, size_t PAGE_SZ>
 class BulkLoader {
-  MemoryPools<PAGE_SZ> mpool_;
-  Pager<PAGE_SZ>& pager_;
   const Context& context_;
+  BulkLoaderStats& stats_;
+  MemoryPools<PAGE_SZ> mpool_;
+  Pager<PAGE_SZ> pager_;
   long partition_counter_ = 0;
   std::array<std::unique_ptr<std::array<std::byte, PAGE_SZ>>, cas::BYTE_MAX> ref_keys_;
   std::unique_ptr<std::array<std::byte, PAGE_SZ>> shortened_key_buffer_;
   std::unique_ptr<std::array<uint8_t, 10'000'000>> serialization_buffer_;
-  BulkLoaderStats stats_;
 
   std::chrono::time_point<std::chrono::high_resolution_clock> start_time_global;
 
@@ -41,7 +41,7 @@ class BulkLoader {
   };
 
 public:
-  BulkLoader(Pager<PAGE_SZ>& pager, const Context& context);
+  BulkLoader(const Context& context, BulkLoaderStats& stats);
   void Load();
   void Load(Partition<PAGE_SZ>& partition);
   BulkLoaderStats& Stats() { return stats_; }

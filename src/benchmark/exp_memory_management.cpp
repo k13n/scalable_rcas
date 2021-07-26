@@ -42,13 +42,12 @@ void benchmark::ExpMemoryManagement<VType, PAGE_SZ>::ExecuteMethod(
   std::cout << "\n" << std::flush;
 
   // run benchmark
-  cas::Pager<PAGE_SZ> pager{context.index_file_};
-  cas::BulkLoader<VType, PAGE_SZ> bulk_loader{pager, context};
+  cas::BulkLoaderStats stats;
+  cas::BulkLoader<VType, PAGE_SZ> bulk_loader{context, stats};
   bulk_loader.Load();
 
   // print output
   cas::util::Log("Output:\n\n");
-  auto stats = bulk_loader.Stats();
   stats.Dump();
   std::cout << "\n\n\n" << std::flush;
 

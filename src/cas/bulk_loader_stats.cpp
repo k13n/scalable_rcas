@@ -3,6 +3,7 @@
 
 void cas::BulkLoaderStats::Dump() const {
   std::cout << "BulkLoaderStats:";
+  std::cout << "\nnr_bulkloads_: " << nr_bulkloads_;
   std::cout << "\nnr_input_keys_: " << nr_input_keys_;
   std::cout << "\npartitions_created_: " << partitions_created_;
   std::cout << "\npartitions_memory_only_: " << partitions_memory_only_;
@@ -25,12 +26,12 @@ void cas::BulkLoaderStats::Dump() const {
   PrintRuntime("      runtime_partitioning_mem_only_", runtime_partitioning_mem_only_);
   PrintRuntime("      runtime_partitioning_hybrid_", runtime_partitioning_hybrid_);
   PrintRuntime("      runtime_partitioning_disk_only_", runtime_partitioning_disk_only_);
-  PrintRuntime("    runtime_clustering_", runtime_clustering_);
-  PrintRuntime("      runtime_clustering_disk_write_", runtime_clustering_disk_write_);
   PrintRuntime("    runtime_construct_leaf_node_", runtime_construct_leaf_node_);
   PrintRuntime("runtime_partition_disk_read_", runtime_partition_disk_read_);
   PrintRuntime("runtime_partition_disk_write_", runtime_partition_disk_write_);
   PrintRuntime("runtime_dsc_computation_", runtime_dsc_computation_);
+  PrintRuntime("runtime_insertion_", runtime_insertion_);
+  PrintRuntime("runtime_collect_keys_", runtime_collect_keys_);
   std::cout << "\n";
 }
 

@@ -14,6 +14,7 @@ struct Timer {
 
 
 struct BulkLoaderStats {
+  size_t nr_bulkloads_{0};
   size_t nr_input_keys_{0};
   size_t partitions_created_{0};
   size_t partitions_memory_only_{0};
@@ -36,15 +37,12 @@ struct BulkLoaderStats {
   Timer runtime_partitioning_disk_only_;
   Timer runtime_partition_disk_read_;
   Timer runtime_partition_disk_write_;
-  Timer runtime_clustering_;
-  Timer runtime_clustering_disk_write_;
   Timer runtime_construct_leaf_node_;
   Timer runtime_dsc_computation_;
-  Histogram page_utilization_;
+  Timer runtime_insertion_;
+  Timer runtime_collect_keys_;
   Histogram node_fanout_;
   Histogram page_fanout_ptrs_;
-  Histogram page_fanout_pages_;
-  Histogram nodes_per_page_;
 
   size_t IoOverhead() const;
   size_t DiskIo() const;

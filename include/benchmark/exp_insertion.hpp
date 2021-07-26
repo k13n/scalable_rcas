@@ -8,22 +8,23 @@ namespace benchmark {
 
 
 template<class VType, size_t PAGE_SZ>
-class ExpInputSize {
+class ExpInsertion {
   cas::Context context_;
-  const std::vector<size_t>& memory_sizes_;
-  std::vector<cas::BulkLoaderStats> results_;
+  const std::vector<double>& bulkload_fractions_;
+  std::vector<std::pair<double, cas::BulkLoaderStats>> results_;
 
 public:
-  ExpInputSize(
+  ExpInsertion(
       const cas::Context& context,
-      const std::vector<size_t>& input_
+      const std::vector<double>& bulkload_fractions
   );
 
   void Execute();
 
 private:
-  void ExecuteMethod(cas::MemoryPlacement method, size_t memory_size);
+  void Execute(double bulkload_fraction);
   void PrintOutput();
 };
 
 }; // namespace benchmark
+

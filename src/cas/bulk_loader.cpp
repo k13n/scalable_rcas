@@ -15,11 +15,13 @@
 
 template<class VType, size_t PAGE_SZ>
 cas::BulkLoader<VType, PAGE_SZ>::BulkLoader(
-      cas::Pager<PAGE_SZ>& pager,
-      const cas::Context& context)
-  : mpool_(MemoryPools<PAGE_SZ>::Construct(context.mem_size_bytes_, context.mem_capacity_bytes_))
-  , pager_(pager)
-  , context_(context)
+      const cas::Context& context,
+      cas::BulkLoaderStats& stats
+    )
+  : context_{context}
+  , stats_{stats}
+  , mpool_(MemoryPools<PAGE_SZ>::Construct(context.mem_size_bytes_, context.mem_capacity_bytes_))
+  , pager_(context.index_file_)
   , shortened_key_buffer_(std::make_unique<std::array<std::byte, PAGE_SZ>>())
   , serialization_buffer_(std::make_unique<std::array<uint8_t, 10'000'000>>())
 {
@@ -88,6 +90,8 @@ void cas::BulkLoader<VType, PAGE_SZ>::Load() {
   cas::util::AddToTimer(stats_.runtime_construction_, construct_start);
 
   cas::util::AddToTimer(stats_.runtime_, start_time_global);
+  stats_.index_bytes_written_ += std::filesystem::file_size(context_.index_file_);
+  ++stats_.nr_bulkloads_;
 }
 
 
@@ -139,6 +143,8 @@ void cas::BulkLoader<VType, PAGE_SZ>::Load(cas::Partition<PAGE_SZ>& partition) {
   cas::util::AddToTimer(stats_.runtime_construction_, construct_start);
 
   cas::util::AddToTimer(stats_.runtime_, start_time_global);
+  stats_.index_bytes_written_ += std::filesystem::file_size(context_.index_file_);
+  ++stats_.nr_bulkloads_;
 }
 
 

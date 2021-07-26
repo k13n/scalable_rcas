@@ -24,7 +24,7 @@ int main_(int argc, char** argv) {
   cas::SearchKey<VType> skey{path, low, high};
   auto bkey = cas::KeyEncoder<VType>::Encode(skey, false);
 
-  cas::QueryExecutor<VType> query{context.index_file_};
+  cas::QueryExecutor query{context.index_file_};
   auto stats = query.Execute(bkey, cas::kNullEmitter);
   stats.Dump();
 

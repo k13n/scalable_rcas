@@ -24,26 +24,23 @@ void benchmark::ExpStructure<VType, PAGE_SZ>::Execute() {
   std::cout << "\n\n" << std::flush;
 
   // run benchmark
-  cas::Pager<PAGE_SZ> pager{context_.index_file_};
-  cas::BulkLoader<VType, PAGE_SZ> bulk_loader{pager, context_};
+  cas::BulkLoaderStats stats;
+  cas::BulkLoader<VType, PAGE_SZ> bulk_loader{context_, stats};
   bulk_loader.Load();
 
   // print output
   std::cout << "\n\n\n";
   cas::util::Log("Output:\n\n");
-  auto stats = bulk_loader.Stats();
   stats.Dump();
   std::cout << "\n";
 
   // collect some stats
+  cas::Pager<PAGE_SZ> pager{context_.index_file_};
   cas::IndexStats<PAGE_SZ> index_stats{pager};
   index_stats.Compute();
 
-  PrintOutput(stats.nodes_per_page_, 32, "Nodes Per Page");
   PrintOutput(stats.node_fanout_, 32, 256, "Node Fanout");
   PrintOutput(stats.page_fanout_ptrs_, 32, "Page Fanout Pointers");
-  PrintOutput(stats.page_fanout_pages_, 32, "Page Fanout Pages");
-  PrintOutput(stats.page_utilization_, 32, PAGE_SZ, "Page Utilization");
   PrintOutput(index_stats.internal_depth_histo_, 32, "Internal Depth");
   PrintOutput(index_stats.external_depth_histo_, 32, "External Depth");
   PrintOutput(index_stats.internal_leaf_depth_histo_, 32, "Internal Leaf Depth");

@@ -5,6 +5,7 @@
 #include "cas/bulk_loader.hpp"
 #include "cas/query_executor.hpp"
 #include "cas/mem/insertion.hpp"
+#include "cas/util.hpp"
 #include <filesystem>
 #include <random>
 
@@ -12,7 +13,10 @@
 template<class VType, size_t PAGE_SZ>
 void cas::Index<VType, PAGE_SZ>::Insert(cas::BinaryKey key) {
   cas::mem::Insertion insertion{&root_, key, context_.partitioning_threshold_};
+  auto start = std::chrono::high_resolution_clock::now();
   insertion.Execute();
+  cas::util::AddToTimer(stats_.runtime_insertion_, start);
+  cas::util::AddToTimer(stats_.runtime_, start);
   ++nr_memory_keys_;
   if (nr_memory_keys_ >= context_.max_memory_keys_) {
     HandleOverflow();
@@ -26,6 +30,8 @@ void cas::Index<VType, PAGE_SZ>::HandleOverflow() {
     return;
   }
 
+  auto start = std::chrono::high_resolution_clock::now();
+
   // create root partition with random name
   std::random_device dev;
   std::mt19937 rng(dev());
@@ -34,8 +40,8 @@ void cas::Index<VType, PAGE_SZ>::HandleOverflow() {
     + "tmp_root_partition_"
     + std::to_string(dist(rng));;
 
-  cas::BulkLoaderStats stats;
-  Partition<PAGE_SZ> partition{partition_file, stats, context_};
+  Partition<PAGE_SZ> partition{partition_file, stats_, context_};
+  partition.IsRootPartition(true);
 
   // data needed to compute discriminative bytes of the new partition
   cas::MemoryKey ref_key;
@@ -99,7 +105,7 @@ void cas::Index<VType, PAGE_SZ>::HandleOverflow() {
   // look for the first index that does not exist
   int idx_number = 0;
   while (true) {
-    std::string filename = context_.index_file_ + std::to_string(idx_number);
+    std::string filename = context_.pipeline_dir_ + "/index.bin" + std::to_string(idx_number);
     if (!std::filesystem::exists(filename)) {
       break;
     }
@@ -108,7 +114,7 @@ void cas::Index<VType, PAGE_SZ>::HandleOverflow() {
 
   // collect keys in all indexes before the idx_number
   for (int i = 0; i < idx_number; ++i) {
-    std::string filename = context_.index_file_ + std::to_string(i);
+    std::string filename = context_.pipeline_dir_ + "/index.bin" + std::to_string(i);
     cas::QueryExecutor query{filename};
     query.Execute(search_key, emitter);
   }
@@ -116,16 +122,19 @@ void cas::Index<VType, PAGE_SZ>::HandleOverflow() {
   // flush dirty page to disk
   partition.PushToDisk(io_page);
 
+  // take runtime of collecting keys
+  cas::util::AddToTimer(stats_.runtime_collect_keys_, start);
+  cas::util::AddToTimer(stats_.runtime_, start);
+
   // bulk-load new index for idx_number
   cas::Context context_copy = context_;
-  context_copy.index_file_ = context_.index_file_ + std::to_string(idx_number);
+  context_copy.index_file_ = context_.pipeline_dir_ + "/index.bin" + std::to_string(idx_number);
   context_copy.dataset_size_ = 0;
   context_copy.use_root_dsc_bytes_ = true;
   context_copy.root_dsc_P_ = dsc_p;
   context_copy.root_dsc_V_ = dsc_v;
   context_copy.delete_root_partition_ = true;
-  cas::Pager<PAGE_SZ> pager{context_copy.index_file_};
-  cas::BulkLoader<VType, PAGE_SZ> bulk_loader{pager, context_copy};
+  cas::BulkLoader<VType, PAGE_SZ> bulk_loader{context_copy, stats_};
   bulk_loader.Load(partition);
 
   // delete in-memory index
@@ -135,9 +144,38 @@ void cas::Index<VType, PAGE_SZ>::HandleOverflow() {
 
   // delete disk-based indexes < idx_number
   for (int i = 0; i < idx_number; ++i) {
-    std::string filename = context_.index_file_ + std::to_string(i);
+    std::string filename = context_.pipeline_dir_ + "/index.bin" + std::to_string(i);
     std::filesystem::remove(filename);
   }
+}
+
+
+template<class VType, size_t PAGE_SZ>
+void cas::Index<VType, PAGE_SZ>::BulkLoad() {
+  ClearPipelineFiles();
+  Context context_copy = context_;
+
+  // create index file with random name
+  std::random_device dev;
+  std::mt19937 rng(dev());
+  std::uniform_int_distribution<std::mt19937::result_type> dist(1,1'000'000'000);
+  context_copy.index_file_ = context_copy.pipeline_dir_
+    + "tmp_index_"
+    + std::to_string(dist(rng));;
+
+  // bulk-load index
+  cas::BulkLoader<VType, PAGE_SZ> bulk_loader{context_copy, stats_};
+  stats_.nr_input_keys_ = 0;
+  bulk_loader.Load();
+
+  // change the name of the index file
+  int k = std::ceil(std::log2(
+        stats_.nr_input_keys_ /
+        static_cast<double>(context_copy.max_memory_keys_)));
+  std::string new_index_file = context_copy.pipeline_dir_
+    + "index.bin"
+    + std::to_string(k);
+  std::filesystem::rename(context_copy.index_file_, new_index_file);
 }
 
 
@@ -184,6 +222,30 @@ void cas::Index<VType, PAGE_SZ>::DeleteNodesRecursively(cas::INode* node) {
     DeleteNodesRecursively(child);
   });
   delete node;
+}
+
+
+template<class VType, size_t PAGE_SZ>
+void cas::Index<VType, PAGE_SZ>::ClearPipelineFiles() {
+  // create the partition folder if it doesn't exist
+  if (!std::filesystem::is_directory(context_.partition_folder_) ||
+      !std::filesystem::exists(context_.partition_folder_)) {
+    std::filesystem::create_directory(context_.partition_folder_);
+  }
+  // delete all existing partition files on disk
+  for (const auto& entry : std::filesystem::directory_iterator(context_.partition_folder_)) {
+    std::filesystem::remove_all(entry);
+  }
+
+  // create the pipeline folder if it doesn't exist
+  if (!std::filesystem::is_directory(context_.pipeline_dir_) ||
+      !std::filesystem::exists(context_.pipeline_dir_)) {
+    std::filesystem::create_directory(context_.pipeline_dir_);
+  }
+  // delete all existing index files on disk
+  for (const auto& entry : std::filesystem::directory_iterator(context_.pipeline_dir_)) {
+    std::filesystem::remove_all(entry);
+  }
 }
 
 
