@@ -1,4 +1,5 @@
 #include "cas/bulk_loader.hpp"
+#include "cas/node_reader.hpp"
 #include "cas/key_encoder.hpp"
 #include "cas/util.hpp"
 #include <algorithm>
@@ -544,8 +545,10 @@ template<class VType, size_t PAGE_SZ>
 size_t cas::BulkLoader<VType, PAGE_SZ>::SerializeNode(Node& node) {
   auto& buffer = *serialization_buffer_.get();
 
-  size_t path_limit  = (1 << 12) - 1;
-  size_t value_limit = (1 <<  4) - 1;
+  constexpr size_t path_limit    = (1ul << 12) - 1;
+  constexpr size_t value_limit   = (1ul <<  4) - 1;
+  constexpr size_t payload_limit = (1ul << 14) - 1;
+  constexpr size_t pointer_limit = (1ul << 48) - 1;
 
   // check bounds
   if (node.path_.size() > path_limit) {
@@ -557,29 +560,27 @@ size_t cas::BulkLoader<VType, PAGE_SZ>::SerializeNode(Node& node) {
   if (node.children_pointers_.size() > 256) {
     throw std::runtime_error{"number of children exceeds 256"};
   }
-  if (node.suffixes_.size() > std::numeric_limits<uint16_t>::max()) {
-    throw std::runtime_error{"number of suffixes exceeds uint16_t"};
+  if (node.suffixes_.size() > payload_limit) {
+    throw std::runtime_error{"number of suffixes exceeds 2**14-1"};
   }
   if (node.ByteSize(node.children_pointers_.size()) > buffer.size()) {
     throw std::runtime_error{"node exceeds buffer size"};
   }
 
   // determine nr children/suffixes
-  uint16_t m = node.IsLeaf()
-    ? static_cast<uint16_t>(node.suffixes_.size())
-    : static_cast<uint16_t>(node.children_pointers_.size());
+  size_t m = node.IsLeaf()
+    ? node.suffixes_.size()
+    : node.children_pointers_.size();
 
-  // encode path and value length in one uint16_t (12 bits for plen, 4 bits for vlen);
-  uint16_t pv_len = cas::util::EncodeSizes(node.path_.size(), node.value_.size());
+  uint32_t header = 0;
+  header |= (static_cast<uint32_t>(node.dimension_)    << 30);
+  header |= (static_cast<uint32_t>(node.path_.size())  << 18);
+  header |= (static_cast<uint32_t>(node.value_.size()) << 14);
+  header |= (static_cast<uint32_t>(m));
 
   // serialize header
   size_t offset = 0;
-
-  buffer[offset++] = static_cast<uint8_t>(node.dimension_);
-  buffer[offset++] = static_cast<uint8_t>((pv_len >> 8) & 0xFF);
-  buffer[offset++] = static_cast<uint8_t>((pv_len >> 0) & 0xFF);
-  buffer[offset++] = static_cast<uint8_t>((m >> 8) & 0xFF);
-  buffer[offset++] = static_cast<uint8_t>((m >> 0) & 0xFF);
+  CopyToSerializationBuffer(offset, &header, sizeof(uint32_t));
   CopyToSerializationBuffer(offset, &node.path_[0], node.path_.size());
   CopyToSerializationBuffer(offset, &node.value_[0], node.value_.size());
 
@@ -592,7 +593,7 @@ size_t cas::BulkLoader<VType, PAGE_SZ>::SerializeNode(Node& node) {
       if (suffix.value_.size() > value_limit) {
         throw std::runtime_error{"value-suffix size exceeds 2**4-1"};
       }
-      pv_len = cas::util::EncodeSizes(suffix.path_.size(), suffix.value_.size());
+      uint16_t pv_len = cas::util::EncodeSizes(suffix.path_.size(), suffix.value_.size());
       buffer[offset++] = static_cast<uint8_t>((pv_len >> 8) & 0xFF);
       buffer[offset++] = static_cast<uint8_t>((pv_len >> 0) & 0xFF);
       CopyToSerializationBuffer(offset, &suffix.path_[0], suffix.path_.size());
@@ -602,9 +603,8 @@ size_t cas::BulkLoader<VType, PAGE_SZ>::SerializeNode(Node& node) {
   } else {
     // serialize child pointers
     for (const auto& [byte, ptr] : node.children_pointers_) {
-      constexpr size_t limit = 1ul<<48ul; // 6 byte range
-      if (ptr >= limit) {
-        throw std::runtime_error{"pointer size exceeds 2**48"};
+      if (ptr >= pointer_limit) {
+        throw std::runtime_error{"pointer size exceeds 2**48-1"};
       }
       buffer[offset++] = static_cast<uint8_t>(byte);
       buffer[offset++] = static_cast<uint8_t>((ptr >> 40) & 0xFF);
@@ -640,8 +640,8 @@ void cas::BulkLoader<VType, PAGE_SZ>::CopyToSerializationBuffer(
 template<class VType, size_t PAGE_SZ>
 size_t cas::BulkLoader<VType, PAGE_SZ>::Node::ByteSize(int nr_children) const {
   size_t size = 0;
-  // header (dimension:1B, l_P:1B, l_V:1B, m:2B)
-  size += 5;
+  // header (dimension: 2 bits, l_P: 12 bits, l_V: 4 bits, m: 14 bits)
+  size += 4;
   // lenghts of substrings
   size += path_.size();
   size += value_.size();

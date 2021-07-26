@@ -14,46 +14,41 @@ namespace cas {
 
 
 class NodeReader : public INode {
-  static constexpr int POS_D = 0;
-  static constexpr int POS_LEN_PV = 1;
-  static constexpr int POS_M = 3;
-  static constexpr int POS_P = 5;
+  // 32-bit header: [dimension: 2 bits, len path: 12 bits, len value: 2 bits, m: 14 bits]
+  static constexpr uint32_t k_mask_d  = 0b11'000000000000'0000'00000000000000;
+  static constexpr uint32_t k_mask_lp = 0b00'111111111111'0000'00000000000000;
+  static constexpr uint32_t k_mask_lv = 0b00'000000000000'1111'00000000000000;
+  static constexpr uint32_t k_mask_m  = 0b00'000000000000'0000'11111111111111;
+  // beginning of payload
+  static constexpr int POS_P = 4;
 
   const uint8_t* head_;
   const uint8_t* buffer_;
+  uint32_t header_;
 
 public:
-
   NodeReader(const uint8_t* head, size_t pos)
     : head_{head}
     , buffer_{head + pos}
-  {}
+  {
+    std::memcpy(&header_, buffer_, 4);
+  }
 
   inline cas::Dimension Dimension() const override {
-    return static_cast<cas::Dimension>(buffer_[POS_D]);
+    auto value = static_cast<uint8_t>((k_mask_d & header_) >> 30);
+    return static_cast<cas::Dimension>(value);
   }
 
   inline size_t LenPath() const override {
-    uint16_t data = 0;
-    data |= static_cast<uint16_t>(buffer_[POS_LEN_PV]   << 8);
-    data |= static_cast<uint16_t>(buffer_[POS_LEN_PV+1] << 0);
-    auto [plen, vlen] = cas::util::DecodeSizes(data);
-    return plen;
+    return (k_mask_lp & header_) >> 18;
   }
 
   inline size_t LenValue() const override {
-    uint16_t data = 0;
-    data |= static_cast<uint16_t>(buffer_[POS_LEN_PV]   << 8);
-    data |= static_cast<uint16_t>(buffer_[POS_LEN_PV+1] << 0);
-    auto [plen, vlen] = cas::util::DecodeSizes(data);
-    return vlen;
+    return (k_mask_lv & header_) >> 14;
   }
 
   inline size_t NrEntries() const {
-    uint16_t result = 0;
-    result |= static_cast<uint16_t>(buffer_[POS_M]   << 8);
-    result |= static_cast<uint16_t>(buffer_[POS_M+1] << 0);
-    return result;
+    return k_mask_m & header_;
   }
 
   inline size_t NrChildren() const override {
