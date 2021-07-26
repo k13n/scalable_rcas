@@ -17,6 +17,7 @@ void cas::BulkLoaderStats::Dump() const {
   PrintByteSize("partition_bytes_read_", partition_bytes_read_);
   PrintByteSize("partition_bytes_written_", partition_bytes_written_);
   PrintByteSize("index_bytes_written_", index_bytes_written_);
+  PrintByteSize("index_bytes_read_", index_bytes_read_);
   PrintByteSize("disk_io_", DiskIo());
   PrintByteSize("io_overhead_", IoOverhead());
   PrintRuntime("runtime_", runtime_);
@@ -47,7 +48,8 @@ size_t cas::BulkLoaderStats::DiskIo() const {
     + root_partition_bytes_written_
     + partition_bytes_read_
     + partition_bytes_written_
-    + index_bytes_written_;
+    + index_bytes_written_
+    + index_bytes_read_;
 }
 
 

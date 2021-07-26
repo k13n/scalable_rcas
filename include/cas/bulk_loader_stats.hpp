@@ -26,6 +26,7 @@ struct BulkLoaderStats {
   size_t partition_bytes_read_{0};
   size_t partition_bytes_written_{0};
   size_t index_bytes_written_{0};
+  size_t index_bytes_read_{0};
   size_t mem_pages_read_{0};
   size_t mem_pages_written_{0};
   Timer runtime_;

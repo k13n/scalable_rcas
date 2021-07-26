@@ -117,6 +117,7 @@ void cas::Index<VType, PAGE_SZ>::HandleOverflow() {
     std::string filename = context_.pipeline_dir_ + "/index.bin" + std::to_string(i);
     cas::QueryExecutor query{filename};
     query.Execute(search_key, emitter);
+    stats_.index_bytes_read_ += std::filesystem::file_size(filename);
   }
 
   // flush dirty page to disk
