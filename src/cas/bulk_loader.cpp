@@ -73,11 +73,6 @@ void cas::BulkLoader<VType, PAGE_SZ>::Load() {
   }
   cas::util::AddToTimer(stats_.runtime_dsc_computation_, start_time_dsc);
 
-  stats_.root_partition_bytes_read_ = stats_.partition_bytes_read_;
-  stats_.root_partition_bytes_written_ = stats_.partition_bytes_written_;
-  stats_.partition_bytes_read_ = 0;
-  stats_.partition_bytes_written_ = 0;
-
   // check that the input/output pages are fully available
   assert(mpool_.input_.Full());
   assert(mpool_.output_.Full());
@@ -123,13 +118,6 @@ void cas::BulkLoader<VType, PAGE_SZ>::Load(cas::Partition<PAGE_SZ>& partition) {
     }
   }
   cas::util::AddToTimer(stats_.runtime_dsc_computation_, start_time_dsc);
-
-  // update stats
-  stats_ = partition.Stats();
-  stats_.root_partition_bytes_read_ = stats_.partition_bytes_read_;
-  stats_.root_partition_bytes_written_ = stats_.partition_bytes_written_;
-  stats_.partition_bytes_read_ = 0;
-  stats_.partition_bytes_written_ = 0;
 
   // check that the input/output pages are fully available
   assert(mpool_.input_.Full());

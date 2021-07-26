@@ -12,8 +12,6 @@ void cas::BulkLoaderStats::Dump() const {
   std::cout << "\nfiles_created_: " << files_created_;
   std::cout << "\nmem_pages_read_: " << mem_pages_read_;
   std::cout << "\nmem_pages_written_: " << mem_pages_written_;
-  PrintByteSize("root_partition_bytes_read_", root_partition_bytes_read_);
-  PrintByteSize("root_partition_bytes_written_", root_partition_bytes_written_);
   PrintByteSize("partition_bytes_read_", partition_bytes_read_);
   PrintByteSize("partition_bytes_written_", partition_bytes_written_);
   PrintByteSize("index_bytes_written_", index_bytes_written_);
@@ -44,10 +42,8 @@ size_t cas::BulkLoaderStats::IoOverhead() const {
 
 
 size_t cas::BulkLoaderStats::DiskIo() const {
-  return root_partition_bytes_read_
-    + root_partition_bytes_written_
+  return partition_bytes_written_
     + partition_bytes_read_
-    + partition_bytes_written_
     + index_bytes_written_
     + index_bytes_read_;
 }

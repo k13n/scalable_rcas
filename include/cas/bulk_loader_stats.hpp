@@ -21,8 +21,6 @@ struct BulkLoaderStats {
   size_t partitions_hybrid_{0};
   size_t partitions_disk_only_{0};
   size_t files_created_{0};
-  size_t root_partition_bytes_read_{0};
-  size_t root_partition_bytes_written_{0};
   size_t partition_bytes_read_{0};
   size_t partition_bytes_written_{0};
   size_t index_bytes_written_{0};
