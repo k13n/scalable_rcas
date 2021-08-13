@@ -24,7 +24,7 @@ cas::path_matcher::PrefixMatch cas::path_matcher::MatchPathIncremental(
            // we matchted the path separator, forget about the last * wildcard
            s.star_qpos_ = -1;
          }
-      } else if ((query_path[s.qpos_] == cas::kByteChildAxis && s.qpos_+1 >= len_qpath)
+      } else if ((s.qpos_ < len_qpath && query_path[s.qpos_] == cas::kByteChildAxis && s.qpos_+1 >= len_qpath)
                  || (s.qpos_+1 < len_qpath &&
                     query_path[s.qpos_] == cas::kByteChildAxis &&
                     query_path[s.qpos_+1] != cas::kByteChildAxis)) {
