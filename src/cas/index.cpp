@@ -182,16 +182,25 @@ void cas::Index<VType, PAGE_SZ>::BulkLoad() {
 
 template<class VType, size_t PAGE_SZ>
 cas::QueryStats cas::Index<VType, PAGE_SZ>::Query(
-    cas::SearchKey<VType> key,
+    const cas::SearchKey<VType>& key,
+    const cas::BinaryKeyEmitter emitter)
+{
+  bool reversed = false;
+  auto search_key = cas::KeyEncoder<VType>::Encode(key, reversed);
+  return Query(search_key, emitter);
+}
+
+
+template<class VType, size_t PAGE_SZ>
+cas::QueryStats cas::Index<VType, PAGE_SZ>::Query(
+    const cas::BinarySK& key,
     const cas::BinaryKeyEmitter emitter)
 {
   std::vector<cas::QueryStats> stats;
-  bool reversed = false;
-  auto search_key = cas::KeyEncoder<VType>::Encode(key, reversed);
 
   // query the in-memory index
   if (root_ != nullptr) {
-    cas::Query query{root_, search_key, emitter};
+    cas::Query query{root_, key, emitter};
     query.Execute();
     stats.push_back(query.Stats());
   }
@@ -206,12 +215,14 @@ cas::QueryStats cas::Index<VType, PAGE_SZ>::Query(
   for (const auto& entry : std::filesystem::directory_iterator(context_.pipeline_dir_)) {
     if (entry.is_regular_file()) {
       cas::QueryExecutor query{entry.path().string()};
-      stats.push_back(query.Execute(search_key, emitter));
+      stats.push_back(query.Execute(key, emitter));
     }
   }
 
   return cas::QueryStats::Sum(stats);
 }
+
+
 
 
 template<class VType, size_t PAGE_SZ>

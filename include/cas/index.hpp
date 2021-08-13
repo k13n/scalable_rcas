@@ -25,7 +25,8 @@ public:
   { }
 
   void Insert(BinaryKey key);
-  QueryStats Query(SearchKey<VType> key, const BinaryKeyEmitter emitter);
+  QueryStats Query(const SearchKey<VType>& key, const BinaryKeyEmitter emitter);
+  QueryStats Query(const BinarySK& key, const BinaryKeyEmitter emitter);
   void BulkLoad();
 
   cas::BulkLoaderStats& Stats() {

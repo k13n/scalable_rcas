@@ -1,6 +1,6 @@
 #include "benchmark/exp_querying.hpp"
 #include "cas/key_encoder.hpp"
-#include "cas/query_executor.hpp"
+#include "cas/index.hpp"
 #include "cas/util.hpp"
 #include <fstream>
 #include <sstream>
@@ -9,10 +9,10 @@
 
 template<class VType>
 benchmark::ExpQuerying<VType>::ExpQuerying(
-      const std::string& index_file,
+      const std::string& pipeline_dir,
       const std::vector<cas::SearchKey<VType>>& queries,
       int nr_repetitions)
-  : index_file_(index_file)
+  : pipeline_dir_(pipeline_dir)
   , queries_(queries)
   , nr_repetitions_(nr_repetitions)
 {
@@ -26,11 +26,14 @@ benchmark::ExpQuerying<VType>::ExpQuerying(
 template<class VType>
 void benchmark::ExpQuerying<VType>::Execute() {
   cas::util::Log("Experiment ExpQuerying\n");
-  std::cout << "index_file: " << index_file_ << "\n\n";
+  std::cout << "pipeline_dir: " << pipeline_dir_ << "\n\n";
 
   results_.reserve(nr_repetitions_ * encoded_queries_.size());
   for (int i = 0; i < nr_repetitions_; ++i) {
     cas::util::Log("Repetition " + std::to_string(i));
+    cas::Context context;
+    context.pipeline_dir_ = pipeline_dir_;
+    cas::Index<VType, cas::PAGE_SZ_16KB> index{context};
     for (const auto& search_key : encoded_queries_) {
       const cas::BinaryKeyEmitter emitter = [](
           const cas::QueryBuffer& /* path */, size_t /* p_len */,
@@ -38,8 +41,7 @@ void benchmark::ExpQuerying<VType>::Execute() {
           cas::ref_t ref) -> void {
         cas::ToString(ref);
       };
-      cas::QueryExecutor query{index_file_};
-      auto stats = query.Execute(search_key, emitter);
+      auto stats = index.Query(search_key, emitter);
       results_.push_back(stats);
     }
   }

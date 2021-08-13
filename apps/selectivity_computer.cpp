@@ -1,6 +1,6 @@
 #include <cas/key.hpp>
 #include <cas/key_encoder.hpp>
-#include <cas/query_executor.hpp>
+#include <cas/index.hpp>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -22,27 +22,27 @@ cas::SearchKey<cas::vint64_t> ParseQuery(
 
   cas::vint64_t low  = std::stoll(slow);
   cas::vint64_t high = std::stoll(shigh);
-  return cas::SearchKey<cas::vint64_t>{std::move(spath), low, high};
+  return cas::SearchKey<cas::vint64_t>{spath, low, high};
 }
 
 
 
 template<class VType>
 class SelectivityComputer {
-  const std::string index_file_;
+  cas::Index<VType, cas::PAGE_SZ_16KB> index_;
   size_t nr_keys_;
 
 public:
   SelectivityComputer(
-        const std::string& index_file,
+        const cas::Context& context,
         size_t nr_keys)
-    : index_file_{index_file}
+    : index_{context}
     , nr_keys_{nr_keys}
   {}
 
-  void Execute(cas::SearchKey<VType> skey) {
+  void Execute(const cas::SearchKey<VType>& skey) {
     cas::SearchKey<VType> values_only{"/**", skey.low_, skey.high_};
-    cas::SearchKey<VType> paths_only{skey.path_, 0, cas::VINT64_MAX};
+    cas::SearchKey<VType> paths_only{skey.path_, cas::VINT64_MIN, cas::VINT64_MAX};
 
     /* ExecuteQuery(skey); */
     /* ExecuteQuery(values_only); */
@@ -51,16 +51,15 @@ public:
     ExecuteConcise(skey);
     ExecuteConcise(values_only);
     ExecuteConcise(paths_only);
-    std::cout << "\n";
+    std::cout << "\n" << std::flush;
   }
 
 private:
-  void ExecuteQuery(cas::SearchKey<VType> skey) {
+  void ExecuteQuery(const cas::SearchKey<VType>& skey) {
     skey.Dump();
     bool reverse_paths = false;
     auto bkey = cas::KeyEncoder<cas::vint64_t>::Encode(skey, reverse_paths);
-    cas::QueryExecutor query{index_file_};
-    auto stats = query.Execute(bkey, cas::kNullEmitter);
+    auto stats = index_.Query(bkey, cas::kNullEmitter);
 
     std::cout << "\n";
     stats.Dump();
@@ -68,15 +67,15 @@ private:
     std::cout << "\n\n";
   }
 
-  void ExecuteConcise(cas::SearchKey<VType> skey) {
+  void ExecuteConcise(const cas::SearchKey<VType>& skey) {
     bool reverse_paths = false;
     auto bkey = cas::KeyEncoder<cas::vint64_t>::Encode(skey, reverse_paths);
-    cas::QueryExecutor query{index_file_};
-    auto stats = query.Execute(bkey, cas::kNullEmitter);
+    auto stats = index_.Query(bkey, cas::kNullEmitter);
 
     std::printf("%10zu (%f)  ",
         stats.nr_matches_,
         stats.nr_matches_ / static_cast<double>(nr_keys_));
+    std::cout << std::flush;
   }
 };
 
@@ -88,14 +87,16 @@ int main_(int argc, char** argv) {
     return -1;
   }
 
-  std::string index_file{argv[1]};
+  std::string pipeline_dir{argv[1]};
   std::string query_file{argv[2]};
   size_t nr_keys;
   if (sscanf(argv[3], "%zu", &nr_keys) != 1) {
     std::cerr << "Could not parse option nr_keys";
   }
 
-  SelectivityComputer<VType> computer{index_file, nr_keys};
+  cas::Context context;
+  context.pipeline_dir_ = pipeline_dir;
+  SelectivityComputer<VType> computer{context, nr_keys};
 
   // parse queries
   std::vector<cas::SearchKey<VType>> queries;
@@ -105,7 +106,7 @@ int main_(int argc, char** argv) {
     queries.push_back(ParseQuery(line, ';'));
   }
 
-  int i = 1;
+  int i = 0;
   for (auto& query : queries) {
     printf("Query %3d: ", i);
     computer.Execute(query);

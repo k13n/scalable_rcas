@@ -30,7 +30,7 @@ cas::SearchKey<cas::vint64_t> ParseQuery(
 
 
 void ExecuteExperiment(
-      const std::string& index_file,
+      const std::string& pipeline_dir,
       const std::string& query_file,
       int nr_repetitions)
 {
@@ -38,7 +38,7 @@ void ExecuteExperiment(
   using Exp = benchmark::ExpQuerying<VType>;
 
   std::cout << "Input:\n";
-  std::cout << "index_file: " << index_file << "\n";
+  std::cout << "pipeline_dir: " << pipeline_dir << "\n";
   std::cout << "query_file: " << query_file << "\n";
 
   // parse queries
@@ -50,23 +50,23 @@ void ExecuteExperiment(
   }
 
   // execute experiment
-  Exp bm{index_file, queries, nr_repetitions};
+  Exp bm{pipeline_dir, queries, nr_repetitions};
   bm.Execute();
 }
 
 
 int main_(int argc, char** argv) {
-  const int OPT_INDEX_FILE = 1;
+  const int OPT_PIPELINE_DIR = 1;
   const int OPT_QUERY_FILE = 2;
   const int OPT_NR_REPETITIONS = 3;
   static struct option long_options[] = {
-    {"index_file",     required_argument, nullptr, OPT_INDEX_FILE},
+    {"pipeline_dir",   required_argument, nullptr, OPT_PIPELINE_DIR},
     {"query_file",     required_argument, nullptr, OPT_QUERY_FILE},
     {"nr_repetitions", required_argument, nullptr, OPT_NR_REPETITIONS},
     {0, 0, 0, 0}
   };
 
-  std::string index_file;
+  std::string pipeline_dir;
   std::string query_file;
   int nr_repetitions = 1;
   while (true) {
@@ -77,8 +77,8 @@ int main_(int argc, char** argv) {
     }
     std::string optvalue{optarg};
     switch (c) {
-      case OPT_INDEX_FILE:
-        index_file = optvalue;
+      case OPT_PIPELINE_DIR:
+        pipeline_dir = optvalue;
         break;
       case OPT_QUERY_FILE:
         query_file = optvalue;
@@ -91,8 +91,8 @@ int main_(int argc, char** argv) {
     }
   }
 
-  if (!std::filesystem::exists(index_file)) {
-    std::cerr << "specify valid input file with --index_file\n";
+  if (!std::filesystem::exists(pipeline_dir)) {
+    std::cerr << "specify valid pipeline_dir with --pipeline_dir\n";
     return 1;
   }
   if (!std::filesystem::exists(query_file)) {
@@ -104,7 +104,7 @@ int main_(int argc, char** argv) {
     return 1;
   }
 
-  ExecuteExperiment(index_file, query_file, nr_repetitions);
+  ExecuteExperiment(pipeline_dir, query_file, nr_repetitions);
   return 0;
 }
 

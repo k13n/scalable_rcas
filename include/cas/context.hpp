@@ -15,7 +15,7 @@ struct Context {
   size_t mem_size_bytes_ = 1'000'000'000;
   size_t mem_capacity_bytes_ = 0;
   size_t dataset_size_ = 0;
-  size_t partitioning_threshold_ = 1;
+  size_t partitioning_threshold_ = 300;
   bool reverse_paths_ = false;
   bool use_direct_io_ = false;
   DscComputation dsc_computation_ = cas::DscComputation::Proactive;

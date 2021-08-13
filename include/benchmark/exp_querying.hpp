@@ -13,7 +13,7 @@ namespace benchmark {
 
 template<class VType>
 class ExpQuerying {
-  const std::string& index_file_;
+  const std::string& pipeline_dir_;
   const std::vector<cas::SearchKey<VType>>& queries_;
   int nr_repetitions_;
 
@@ -22,7 +22,7 @@ class ExpQuerying {
 
 public:
   ExpQuerying(
-      const std::string& index_file,
+      const std::string& pipeline_dir,
       const std::vector<cas::SearchKey<VType>>& queries,
       int nr_repetitions = 1
   );
