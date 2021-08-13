@@ -1,5 +1,6 @@
 #include "cas/mem/node48.hpp"
 #include "cas/mem/node256.hpp"
+#include <stdexcept>
 
 
 cas::mem::Node48::Node48(cas::Dimension dimension)

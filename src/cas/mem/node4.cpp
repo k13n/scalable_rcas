@@ -1,6 +1,7 @@
 #include "cas/mem/node4.hpp"
 #include "cas/mem/node16.hpp"
 #include <cassert>
+#include <stdexcept>
 
 
 cas::mem::Node4::Node4(cas::Dimension dimension)

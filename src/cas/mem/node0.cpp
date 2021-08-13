@@ -1,4 +1,5 @@
 #include "cas/mem/node0.hpp"
+#include <stdexcept>
 
 
 cas::mem::Node0::Node0()

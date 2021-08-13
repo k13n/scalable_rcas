@@ -23,13 +23,13 @@ using BinaryKeyEmitter = std::function<void(
     const QueryBuffer& value, size_t v_len,
     ref_t ref)>;
 
-const cas::BinaryKeyEmitter kNullEmitter = [&](
+const cas::BinaryKeyEmitter kNullEmitter = [](
       const cas::QueryBuffer& /* path */, size_t /* p_len */,
       const cas::QueryBuffer& /* value */, size_t /* v_len */,
       cas::ref_t /* ref */) -> void {
 };
 
-const cas::BinaryKeyEmitter kPrintEmitter = [&](
+const cas::BinaryKeyEmitter kPrintEmitter = [](
       const cas::QueryBuffer& path, size_t p_len,
       const cas::QueryBuffer& value, size_t v_len,
       cas::ref_t ref) -> void {

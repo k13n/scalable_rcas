@@ -1,4 +1,5 @@
 #include "cas/mem/node256.hpp"
+#include <stdexcept>
 
 
 cas::mem::Node256::Node256(cas::Dimension dimension)
