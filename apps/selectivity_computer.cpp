@@ -44,13 +44,13 @@ public:
     cas::SearchKey<VType> values_only{"/**", skey.low_, skey.high_};
     cas::SearchKey<VType> paths_only{skey.path_, cas::VINT64_MIN, cas::VINT64_MAX};
 
-    /* ExecuteQuery(skey); */
-    /* ExecuteQuery(values_only); */
-    /* ExecuteQuery(paths_only); */
+    ExecuteQuery(skey);
+    ExecuteQuery(values_only);
+    ExecuteQuery(paths_only);
 
-    ExecuteConcise(skey);
-    ExecuteConcise(values_only);
-    ExecuteConcise(paths_only);
+    /* ExecuteConcise(skey); */
+    /* ExecuteConcise(values_only); */
+    /* ExecuteConcise(paths_only); */
     std::cout << "\n" << std::flush;
   }
 
@@ -72,9 +72,7 @@ private:
     auto bkey = cas::KeyEncoder<cas::vint64_t>::Encode(skey, reverse_paths);
     auto stats = index_.Query(bkey, cas::kNullEmitter);
 
-    std::printf("%10zu (%f)  ",
-        stats.nr_matches_,
-        stats.nr_matches_ / static_cast<double>(nr_keys_));
+    std::printf("%zu;", stats.nr_matches_);
     std::cout << std::flush;
   }
 };
@@ -108,7 +106,8 @@ int main_(int argc, char** argv) {
 
   int i = 0;
   for (auto& query : queries) {
-    printf("Query %3d: ", i);
+    /* printf("Query %3d: ", i); */
+    printf("Q%d;", i);
     computer.Execute(query);
     std::cout << std::flush;
     ++i;
