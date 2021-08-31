@@ -139,6 +139,7 @@ void cas::Index<VType, PAGE_SZ>::HandleOverflow() {
   bulk_loader.Load(partition);
 
   // delete in-memory index
+  start = std::chrono::high_resolution_clock::now();
   DeleteNodesRecursively(root_);
 	root_ = nullptr;
   nr_memory_keys_ = 0;
@@ -148,6 +149,7 @@ void cas::Index<VType, PAGE_SZ>::HandleOverflow() {
     std::string filename = context_.pipeline_dir_ + "/index.bin" + std::to_string(i);
     std::filesystem::remove(filename);
   }
+  cas::util::AddToTimer(stats_.runtime_, start);
 }
 
 

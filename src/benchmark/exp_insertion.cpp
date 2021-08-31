@@ -3,6 +3,7 @@
 #include "cas/index.hpp"
 #include "cas/util.hpp"
 #include <filesystem>
+#include <sstream>
 
 
 template<class VType, size_t PAGE_SZ>
@@ -58,17 +59,34 @@ void benchmark::ExpInsertion<VType, PAGE_SZ>::Execute(double bulkload_fraction)
   auto cursor = partition.Cursor(io_page);
 
   // insert remaining keys
+  auto start = std::chrono::high_resolution_clock::now();
+  size_t nr_inserted_keys = 0;
+  auto print_progress = [&start,&nr_inserted_keys]() -> void {
+    auto now = std::chrono::high_resolution_clock::now();
+    auto time = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
+    std::stringstream ss;
+    ss << "(nr_keys, runtime_ms): ("
+      << nr_inserted_keys << ", "
+      << time << ")\n";
+    cas::util::Log(ss.str());
+    std::cout << std::flush;
+  };
   size_t i = nr_pages_bulkload;
   while (cursor.HasNext() && i < nr_total_pages) {
     for (auto key : io_page) {
       index.Insert(key);
+      ++nr_inserted_keys;
+      if (nr_inserted_keys % context_copy.max_memory_keys_ == 0) {
+        print_progress();
+      }
     }
     ++i;
   }
   index.FlushMemoryResidentKeys();
+  print_progress();
 
   // print results
-  std::cout << "Results:\n";
+  std::cout << "\nResults:\n";
   index.Stats().Dump();
   std::cout << "\n\n" << std::flush;
 

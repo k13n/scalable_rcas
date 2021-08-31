@@ -59,6 +59,7 @@ void benchmark::ExpQuerying<VType>::PrintOutput() {
   for (const auto& stat : results_) {
     std::cout << "Q" << i << ";"
       << stat.nr_matches_ << ";"
+      << stat.read_nodes_ << ";"
       << (stat.runtime_mus_ / 1000) << "\n";
     ++i;
   }
