@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.stream.Stream;
+import java.util.regex.Pattern;
 
 public class BtreeQueryPerformance {
   public static class CASQuery {
@@ -25,6 +26,19 @@ public class BtreeQueryPerformance {
     @Override
     public String toString() {
       return path + ";" + low + ";" + high;
+    }
+
+    public String getQueryPath() {
+      String p = path;
+      // encode descendant axis **
+      p = p.replaceAll("\\*\\*/", "(.*/)?");
+      p = p.replaceAll("\\*\\*", ".*");
+      // encode label wildcard * (matches everything until the next path separator
+      var matcher = Pattern.compile("([^.])\\*").matcher(p);
+      if (matcher.find()) {
+        p = matcher.replaceAll(matcher.group(1) + "[^/]*");
+      }
+      return "^" + p + "$";
     }
   }
 
@@ -114,12 +128,12 @@ public class BtreeQueryPerformance {
       configureConnection(con, enableIndexVP, enableIndexPV);
 
       pst = con.prepareStatement(
-        "SELECT COUNT(*) FROM "+table+" WHERE kpath LIKE ? AND kvalue BETWEEN ? AND ?");
+        "SELECT COUNT(*) FROM "+table+" WHERE kpath ~ ? AND kvalue BETWEEN ? AND ?");
 
       for (int i = 0; i < nrRepetitions; ++i) {
         int counter = 0;
         for (var query : queries) {
-          pst.setString(1, query.path);
+          pst.setString(1, query.getQueryPath());
           pst.setLong(2, query.low);
           pst.setLong(3, query.high);
 
@@ -136,12 +150,14 @@ public class BtreeQueryPerformance {
           if (DEBUG) {
             System.out.println(query);
             System.out.println(result);
-            ++counter;
             if (counter % 10 == 0) {
               System.out.println("Queries completed: " + counter);
             }
           }
+          System.out.printf("Q%d;%d;%d\n", counter, result.nrMatches, result.runtimeMs);
+          ++counter;
         }
+        System.out.println();
       }
 
       pst.close();
@@ -185,7 +201,7 @@ public class BtreeQueryPerformance {
       stream.forEach((line) -> {
         BtreeQueryPerformance.CASQuery query = new BtreeQueryPerformance.CASQuery();
         String[] parts = line.split(";");
-        query.path = parts[0].replaceAll("\\*\\*", "%");
+        query.path = parts[0];
         query.low  = Long.parseLong(parts[1]);
         query.high = Long.parseLong(parts[2]);
         queries.add(query);
@@ -204,10 +220,10 @@ public class BtreeQueryPerformance {
     int nrRepetitions = 1;
     boolean enableIndexVP;
     boolean enableIndexPV;
-    if (compositeIndex == "vp") {
+    if (compositeIndex.equals("vp")) {
       enableIndexVP = true;
       enableIndexPV = false;
-    } else if (compositeIndex == "pv") {
+    } else if (compositeIndex.equals("pv")) {
       enableIndexPV = true;
       enableIndexVP = false;
     } else {

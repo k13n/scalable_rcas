@@ -41,4 +41,4 @@ unless ["vp","pv"].include? index
   exit
 end
 
-execute_warm_caches(query_file, table, index, 10)
+execute_warm_caches(query_file, table, index, 1)
