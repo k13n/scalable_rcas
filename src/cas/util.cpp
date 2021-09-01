@@ -210,3 +210,24 @@ std::string cas::util::CurrentIsoTime() {
   stream << std::put_time(ltime, "%FT%T%z");
   return stream.str();
 }
+
+
+// thanks to
+// https://stackoverflow.com/a/478960
+std::string cas::util::Exec(const char* cmd) {
+  std::array<char, 128> buffer;
+  std::string result;
+  std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
+  if (!pipe) {
+    throw std::runtime_error("popen() failed!");
+  }
+  while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+    result += buffer.data();
+  }
+  return result;
+}
+
+
+void cas::util::ClearPageCache() {
+  auto s = cas::util::Exec("echo 3 | sudo tee /proc/sys/vm/drop_caches");
+}

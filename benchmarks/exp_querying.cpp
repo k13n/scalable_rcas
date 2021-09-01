@@ -32,6 +32,7 @@ cas::SearchKey<cas::vint64_t> ParseQuery(
 void ExecuteExperiment(
       const std::string& pipeline_dir,
       const std::string& query_file,
+      bool clear_page_cache,
       int nr_repetitions)
 {
   using VType = cas::vint64_t;
@@ -40,6 +41,7 @@ void ExecuteExperiment(
   std::cout << "Input:\n";
   std::cout << "pipeline_dir: " << pipeline_dir << "\n";
   std::cout << "query_file: " << query_file << "\n";
+  std::cout << "clear_page_cache: " << clear_page_cache << "\n";
 
   // parse queries
   std::vector<cas::SearchKey<VType>> queries;
@@ -50,7 +52,7 @@ void ExecuteExperiment(
   }
 
   // execute experiment
-  Exp bm{pipeline_dir, queries, nr_repetitions};
+  Exp bm{pipeline_dir, queries, clear_page_cache, nr_repetitions};
   bm.Execute();
 }
 
@@ -59,16 +61,19 @@ int main_(int argc, char** argv) {
   const int OPT_PIPELINE_DIR = 1;
   const int OPT_QUERY_FILE = 2;
   const int OPT_NR_REPETITIONS = 3;
+  const int OPT_CLEAR_PAGE_CACHE = 4;
   static struct option long_options[] = {
-    {"pipeline_dir",   required_argument, nullptr, OPT_PIPELINE_DIR},
-    {"query_file",     required_argument, nullptr, OPT_QUERY_FILE},
-    {"nr_repetitions", required_argument, nullptr, OPT_NR_REPETITIONS},
+    {"pipeline_dir",     required_argument, nullptr, OPT_PIPELINE_DIR},
+    {"query_file",       required_argument, nullptr, OPT_QUERY_FILE},
+    {"nr_repetitions",   required_argument, nullptr, OPT_NR_REPETITIONS},
+    {"clear_page_cache", required_argument, nullptr, OPT_CLEAR_PAGE_CACHE},
     {0, 0, 0, 0}
   };
 
   std::string pipeline_dir;
   std::string query_file;
   int nr_repetitions = 1;
+  bool clear_page_cache = false;
   while (true) {
     int option_index;
     int c = getopt_long(argc, argv, "", long_options, &option_index);
@@ -88,6 +93,10 @@ int main_(int argc, char** argv) {
           std::cerr << "Could not parse option --nr_repetitions (positive integer expected)\n";
           return 1;
         }
+        break;
+      case OPT_CLEAR_PAGE_CACHE:
+        clear_page_cache = (optvalue == "1" || optvalue == "t");
+        break;
     }
   }
 
@@ -104,7 +113,7 @@ int main_(int argc, char** argv) {
     return 1;
   }
 
-  ExecuteExperiment(pipeline_dir, query_file, nr_repetitions);
+  ExecuteExperiment(pipeline_dir, query_file, clear_page_cache, nr_repetitions);
   return 0;
 }
 

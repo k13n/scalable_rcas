@@ -11,9 +11,11 @@ template<class VType>
 benchmark::ExpQuerying<VType>::ExpQuerying(
       const std::string& pipeline_dir,
       const std::vector<cas::SearchKey<VType>>& queries,
+      bool clear_page_cache,
       int nr_repetitions)
   : pipeline_dir_(pipeline_dir)
   , queries_(queries)
+  , clear_page_cache_(clear_page_cache)
   , nr_repetitions_(nr_repetitions)
 {
   bool reverse_paths = false;
@@ -26,7 +28,8 @@ benchmark::ExpQuerying<VType>::ExpQuerying(
 template<class VType>
 void benchmark::ExpQuerying<VType>::Execute() {
   cas::util::Log("Experiment ExpQuerying\n");
-  std::cout << "pipeline_dir: " << pipeline_dir_ << "\n\n";
+  std::cout << "pipeline_dir: " << pipeline_dir_ << "\n";
+  std::cout << "clear_page_cache: " << clear_page_cache_ << "\n\n";
 
   results_.reserve(nr_repetitions_ * encoded_queries_.size());
   for (int i = 0; i < nr_repetitions_; ++i) {
@@ -35,6 +38,9 @@ void benchmark::ExpQuerying<VType>::Execute() {
     context.pipeline_dir_ = pipeline_dir_;
     cas::Index<VType, cas::PAGE_SZ_16KB> index{context};
     for (const auto& search_key : encoded_queries_) {
+      if (clear_page_cache_) {
+        cas::util::ClearPageCache();
+      }
       const cas::BinaryKeyEmitter emitter = [](
           const cas::QueryBuffer& /* path */, size_t /* p_len */,
           const cas::QueryBuffer& /* value */, size_t /* v_len */,

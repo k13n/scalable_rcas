@@ -5,12 +5,20 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <iostream>
+#include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
 
 namespace cas::util {
+
+
+std::string Exec(const char* cmd);
+void ClearPageCache();
+
 
 inline uint16_t EncodeSizes(size_t plen, size_t vlen) {
   uint16_t result = 0;

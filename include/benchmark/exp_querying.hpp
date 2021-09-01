@@ -15,6 +15,7 @@ template<class VType>
 class ExpQuerying {
   const std::string& pipeline_dir_;
   const std::vector<cas::SearchKey<VType>>& queries_;
+  const bool clear_page_cache_;
   int nr_repetitions_;
 
   std::vector<cas::BinarySK> encoded_queries_;
@@ -24,6 +25,7 @@ public:
   ExpQuerying(
       const std::string& pipeline_dir,
       const std::vector<cas::SearchKey<VType>>& queries,
+      bool clear_page_cache = false,
       int nr_repetitions = 1
   );
 
