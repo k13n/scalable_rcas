@@ -3,19 +3,26 @@
  * java -cp postgresql-42.2.19.jar BtreeQueryPerformance.java
  **/
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.sql.PreparedStatement;
-import java.util.ArrayList;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.stream.Stream;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
+
 
 public class BtreeQueryPerformance {
   public static class CASQuery {
@@ -42,6 +49,7 @@ public class BtreeQueryPerformance {
     }
   }
 
+
   public static class Result {
     long runtimeMs;
     long nrMatches;
@@ -51,6 +59,28 @@ public class BtreeQueryPerformance {
       return runtimeMs + ";" + nrMatches;
     }
   }
+
+
+  interface QueryExecutor {
+    Result call(CASQuery query, String table, Connection con) throws SQLException;
+  }
+
+
+  class StreamGobbler implements Runnable {
+    private InputStream inputStream;
+    private Consumer<String> consumer;
+
+    public StreamGobbler(InputStream inputStream, Consumer<String> consumer) {
+      this.inputStream = inputStream;
+      this.consumer = consumer;
+    }
+
+    @Override
+    public void run() {
+      new BufferedReader(new InputStreamReader(inputStream)).lines().forEach(consumer);
+    }
+  }
+
 
   private static final boolean DEBUG = false;
   private final String table;
@@ -117,9 +147,20 @@ public class BtreeQueryPerformance {
     System.out.println();
   }
 
-  interface QueryExecutor {
-    Result call(CASQuery query, String table, Connection con) throws SQLException;
+
+  void clearOsPageCache() throws IOException, InterruptedException {
+    ProcessBuilder builder = new ProcessBuilder();
+    builder.command("/bin/sh", "-c", "echo 3 | sudo tee /proc/sys/vm/drop_caches");
+    Process process = builder.start();
+    StringBuilder out = new StringBuilder();
+    var gobbler = new StreamGobbler(process.getInputStream(), out::append);
+    var exectuor = Executors.newSingleThreadExecutor();
+    exectuor.submit(gobbler);
+    int exitCode = process.waitFor();
+    exectuor.shutdown();
+    assert exitCode == 0;
   }
+
 
   Result executeCount(CASQuery query, String table, Connection con) throws SQLException {
     Result result = new Result();
@@ -159,7 +200,10 @@ public class BtreeQueryPerformance {
   }
 
 
-  void execute(QueryExecutor executor, boolean enableIndexVP, boolean enableIndexPV) {
+  void execute(QueryExecutor executor,
+        boolean enableIndexVP,
+        boolean enableIndexPV,
+        boolean clearPageCache) {
     String url = "jdbc:postgresql://localhost:5400/rcas";
     String user = "wellenzohn";
     String password = "";
@@ -169,6 +213,9 @@ public class BtreeQueryPerformance {
       for (int i = 0; i < nrRepetitions; ++i) {
         int counter = 0;
         for (var query : queries) {
+          if (clearPageCache) {
+            clearOsPageCache();
+          }
           var result = executor.call(query, table, con);
           results.add(result);
           System.out.printf("Q%d;%d;%d\n", counter, result.nrMatches, result.runtimeMs);
@@ -184,7 +231,7 @@ public class BtreeQueryPerformance {
         System.out.println();
       }
       resetConnection(con);
-    } catch (SQLException ex) {
+    } catch (Exception ex) {
       ex.printStackTrace();
     }
 
@@ -251,10 +298,11 @@ public class BtreeQueryPerformance {
     } else {
       throw new IllegalArgumentException("composite index must be one of {vp,pv}");
     }
+    boolean clearPageCache = ("1".equals(args[3]) || "t".equals(args[3]));
     var exp = new BtreeQueryPerformance(table, queries, nrRepetitions);
     QueryExecutor count  = (q, t, c) -> { return exp.executeCount(q, t, c);  };
     QueryExecutor select = (q, t, c) -> { return exp.executeSelect(q, t, c); };
     // exp.execute(count, enableIndexVP, enableIndexPV);
-    exp.execute(select, enableIndexVP, enableIndexPV);
+    exp.execute(select, enableIndexVP, enableIndexPV, clearPageCache);
   }
 }
