@@ -117,36 +117,61 @@ public class BtreeQueryPerformance {
     System.out.println();
   }
 
+  interface QueryExecutor {
+    Result call(CASQuery query, String table, Connection con) throws SQLException;
+  }
 
-  void execute(boolean enableIndexVP, boolean enableIndexPV) {
+  Result executeCount(CASQuery query, String table, Connection con) throws SQLException {
+    Result result = new Result();
+    PreparedStatement pst = con.prepareStatement(
+        "SELECT COUNT(*) FROM "+table+" WHERE kpath ~ ? AND kvalue BETWEEN ? AND ?");
+    pst.setString(1, query.getQueryPath());
+    pst.setLong(2, query.low);
+    pst.setLong(3, query.high);
+    long tStart = System.currentTimeMillis();
+    ResultSet rs = pst.executeQuery();
+    if (rs.next()) {
+      result.nrMatches = rs.getLong(1);
+    }
+    result.runtimeMs = System.currentTimeMillis() - tStart;
+    pst.close();
+    return result;
+  }
+
+
+  Result executeSelect(CASQuery query, String table, Connection con) throws SQLException {
+    Result result = new Result();
+    PreparedStatement pst = con.prepareStatement(
+        "SELECT revision FROM "+table+" WHERE kpath ~ ? AND kvalue BETWEEN ? AND ?",
+        ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+    pst.setString(1, query.getQueryPath());
+    pst.setLong(2, query.low);
+    pst.setLong(3, query.high);
+    long tStart = System.currentTimeMillis();
+    ResultSet rs = pst.executeQuery();
+    if (rs.next()) {
+      rs.last();
+      result.nrMatches = rs.getRow();
+    }
+    result.runtimeMs = System.currentTimeMillis() - tStart;
+    pst.close();
+    return result;
+  }
+
+
+  void execute(QueryExecutor executor, boolean enableIndexVP, boolean enableIndexPV) {
     String url = "jdbc:postgresql://localhost:5400/rcas";
     String user = "wellenzohn";
     String password = "";
 
-    PreparedStatement pst = null;
     try (Connection con = DriverManager.getConnection(url, user, password)) {
       configureConnection(con, enableIndexVP, enableIndexPV);
-
-      pst = con.prepareStatement(
-        "SELECT COUNT(*) FROM "+table+" WHERE kpath ~ ? AND kvalue BETWEEN ? AND ?");
-
       for (int i = 0; i < nrRepetitions; ++i) {
         int counter = 0;
         for (var query : queries) {
-          pst.setString(1, query.getQueryPath());
-          pst.setLong(2, query.low);
-          pst.setLong(3, query.high);
-
-          Result result = new Result();
-          long tStart = System.currentTimeMillis();
-          ResultSet rs = pst.executeQuery();
-          result.runtimeMs = System.currentTimeMillis() - tStart;
-          if (rs.next()) {
-            result.nrMatches = rs.getLong(1);
-          }
-
+          var result = executor.call(query, table, con);
           results.add(result);
-
+          System.out.printf("Q%d;%d;%d\n", counter, result.nrMatches, result.runtimeMs);
           if (DEBUG) {
             System.out.println(query);
             System.out.println(result);
@@ -154,13 +179,10 @@ public class BtreeQueryPerformance {
               System.out.println("Queries completed: " + counter);
             }
           }
-          System.out.printf("Q%d;%d;%d\n", counter, result.nrMatches, result.runtimeMs);
           ++counter;
         }
         System.out.println();
       }
-
-      pst.close();
       resetConnection(con);
     } catch (SQLException ex) {
       ex.printStackTrace();
@@ -229,6 +251,10 @@ public class BtreeQueryPerformance {
     } else {
       throw new IllegalArgumentException("composite index must be one of {vp,pv}");
     }
-    new BtreeQueryPerformance(table, queries, nrRepetitions).execute(enableIndexVP, enableIndexPV);
+    var exp = new BtreeQueryPerformance(table, queries, nrRepetitions);
+    QueryExecutor count  = (q, t, c) -> { return exp.executeCount(q, t, c);  };
+    QueryExecutor select = (q, t, c) -> { return exp.executeSelect(q, t, c); };
+    // exp.execute(count, enableIndexVP, enableIndexPV);
+    exp.execute(select, enableIndexVP, enableIndexPV);
   }
 }
