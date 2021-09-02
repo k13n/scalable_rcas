@@ -19,7 +19,7 @@ struct Context {
   bool reverse_paths_ = false;
   bool use_direct_io_ = false;
   DscComputation dsc_computation_ = cas::DscComputation::Proactive;
-  MemoryPlacement memory_placement_ = cas::MemoryPlacement::FrontLoading;
+  MemoryPlacement memory_placement_ = cas::MemoryPlacement::AllOrNothing;
   bool compute_fanout_ = false;
   bool print_root_partition_table_allocation_ = false;
   bool use_root_dsc_bytes_ = false;
