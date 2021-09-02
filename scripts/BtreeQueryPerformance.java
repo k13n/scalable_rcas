@@ -302,7 +302,7 @@ public class BtreeQueryPerformance {
     var exp = new BtreeQueryPerformance(table, queries, nrRepetitions);
     QueryExecutor count  = (q, t, c) -> { return exp.executeCount(q, t, c);  };
     QueryExecutor select = (q, t, c) -> { return exp.executeSelect(q, t, c); };
-    // exp.execute(count, enableIndexVP, enableIndexPV);
+    // exp.execute(count, enableIndexVP, enableIndexPV, clearPageCache);
     exp.execute(select, enableIndexVP, enableIndexPV, clearPageCache);
   }
 }
