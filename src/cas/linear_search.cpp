@@ -4,9 +4,9 @@
 #include <chrono>
 
 
-template<class VType, size_t PAGE_SZ>
-cas::LinearSearch<VType, PAGE_SZ>::LinearSearch(
-    Partition<PAGE_SZ>& partition,
+template<class VType>
+cas::LinearSearch<VType>::LinearSearch(
+    Partition& partition,
     const BinarySK& key,
     const cas::BinaryKeyEmitter& emitter)
     : partition_(partition)
@@ -17,11 +17,11 @@ cas::LinearSearch<VType, PAGE_SZ>::LinearSearch(
 {}
 
 
-template<class VType, size_t PAGE_SZ>
-void cas::LinearSearch<VType, PAGE_SZ>::Execute() {
+template<class VType>
+void cas::LinearSearch<VType>::Execute() {
   const auto& t_start = std::chrono::high_resolution_clock::now();
-  std::array<std::byte, PAGE_SZ> io_page_buffer;
-  cas::MemoryPage<PAGE_SZ> io_page{&io_page_buffer[0]};
+  std::array<std::byte, cas::PAGE_SZ> io_page_buffer;
+  cas::MemoryPage io_page{&io_page_buffer[0]};
   auto cursor = partition_.Cursor(io_page);
   while (cursor.HasNext()) {
     auto& page = cursor.NextPage();
@@ -44,15 +44,15 @@ void cas::LinearSearch<VType, PAGE_SZ>::Execute() {
 }
 
 
-template<class VType, size_t PAGE_SZ>
-bool cas::LinearSearch<VType, PAGE_SZ>::MatchPath(uint16_t len_pat) {
+template<class VType>
+bool cas::LinearSearch<VType>::MatchPath(uint16_t len_pat) {
   return cas::path_matcher::MatchPath(
       *buf_pat_, key_.path_, len_pat);
 }
 
 
-template<class VType, size_t PAGE_SZ>
-bool cas::LinearSearch<VType, PAGE_SZ>::MatchValue(uint16_t len_val) {
+template<class VType>
+bool cas::LinearSearch<VType>::MatchValue(uint16_t len_val) {
   uint16_t vl_pos = 0;
   uint16_t vh_pos = 0;
 
@@ -86,8 +86,4 @@ bool cas::LinearSearch<VType, PAGE_SZ>::MatchValue(uint16_t len_val) {
 
 
 // explicit instantiations to separate header from implementation
-template class cas::LinearSearch<cas::vint64_t, cas::PAGE_SZ_64KB>;
-template class cas::LinearSearch<cas::vint64_t, cas::PAGE_SZ_32KB>;
-template class cas::LinearSearch<cas::vint64_t, cas::PAGE_SZ_16KB>;
-template class cas::LinearSearch<cas::vint64_t, cas::PAGE_SZ_8KB>;
-template class cas::LinearSearch<cas::vint64_t, cas::PAGE_SZ_4KB>;
+template class cas::LinearSearch<cas::vint64_t>;

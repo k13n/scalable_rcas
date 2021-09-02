@@ -36,14 +36,13 @@ cas::Key<cas::vint64_t> ParseInputLine(
 }
 
 
-template<size_t PAGE_SZ>
 void Csv2Partition() {
   // create page as buffer
-  std::vector<std::byte> buffer{PAGE_SZ, std::byte{0}};
-  cas::MemoryPage<PAGE_SZ> page{&buffer[0]};
-  std::array<std::byte, PAGE_SZ> key_buffer;
+  std::vector<std::byte> buffer{cas::PAGE_SZ, std::byte{0}};
+  cas::MemoryPage page{&buffer[0]};
+  std::array<std::byte, cas::PAGE_SZ> key_buffer;
   cas::BinaryKey bkey(key_buffer.data());
-  std::array<std::byte, PAGE_SZ> ref_key_buffer;
+  std::array<std::byte, cas::PAGE_SZ> ref_key_buffer;
   cas::BinaryKey ref_bkey(ref_key_buffer.data());
 
   // this is a conservatively high estimate
@@ -71,9 +70,9 @@ void Csv2Partition() {
       continue;
     }
 
-    // skip keys that are close to 4KB long
+    // skip keys that are close to PAGE_SZ long
     // this makes sure that every key fits into a page
-    if (key.Size() + key_header_size > cas::PAGE_SZ_4KB) {
+    if (key.Size() + key_header_size > cas::PAGE_SZ) {
       continue;
     }
 
@@ -86,7 +85,7 @@ void Csv2Partition() {
     cas::KeyEncoder<cas::vint64_t>::Encode(key, bkey);
     if (bkey.ByteSize() > page.FreeSpace()) {
       // write page to stdout since it is full
-      std::fwrite(page.Data(), 1, PAGE_SZ, stdout);
+      std::fwrite(page.Data(), 1, cas::PAGE_SZ, stdout);
       page.Reset();
       ++nr_pages;
     }
@@ -118,7 +117,7 @@ void Csv2Partition() {
   }
 
   // flush last page to stdout
-  std::fwrite(page.Data(), 1, PAGE_SZ, stdout);
+  std::fwrite(page.Data(), 1, cas::PAGE_SZ, stdout);
   ++nr_pages;
 
   // write statistics to stderr
@@ -133,28 +132,13 @@ void Csv2Partition() {
 int main_(int argc, char** argv) {
   signal(SIGINT, signal_handler);
 
-  size_t page_sz = 0;
   std::string input_filename = "";
   bool read_from_file = false;
 
-  // read page size
-  if (argc < 2) {
-    std::cerr << "First parameter: page size missing\n";
-    return 1;
-  } else {
-    if (1 != std::sscanf(argv[1], "%zu", &page_sz)) {
-      std::cerr << "First parameter: page size (integer)\n";
-      return 1;
-    }
-    if (page_sz % 4096 != 0) {
-      std::cerr << "Page size must be a multiple of 4096\n";
-      return 1;
-    }
-  }
   // check if input is coming from stdin or file
-  if (argc >= 3) {
+  if (argc >= 2) {
     read_from_file = true;
-    input_filename = std::string{argv[2]};
+    input_filename = std::string{argv[1]};
   }
 
   std::ifstream infile(input_filename);
@@ -171,26 +155,7 @@ int main_(int argc, char** argv) {
     return 1;
   }
 
-  switch (page_sz) {
-    case cas::PAGE_SZ_4KB:
-      Csv2Partition<cas::PAGE_SZ_4KB>();
-      break;
-    case cas::PAGE_SZ_8KB:
-      Csv2Partition<cas::PAGE_SZ_8KB>();
-      break;
-    case cas::PAGE_SZ_16KB:
-      Csv2Partition<cas::PAGE_SZ_16KB>();
-      break;
-    case cas::PAGE_SZ_32KB:
-      Csv2Partition<cas::PAGE_SZ_32KB>();
-      break;
-    case cas::PAGE_SZ_64KB:
-      Csv2Partition<cas::PAGE_SZ_64KB>();
-      break;
-    default:
-      std::cerr << "Page size invalid" << std::endl;
-  }
-
+  Csv2Partition();
   if (infile.is_open()) {
     infile.close();
   }

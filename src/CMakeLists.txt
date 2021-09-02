@@ -30,7 +30,6 @@ add_library(cas
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/search_key.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/swh_pid.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/util.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/cas/page_buffer.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/linear_search.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/cas/types.cpp
   #

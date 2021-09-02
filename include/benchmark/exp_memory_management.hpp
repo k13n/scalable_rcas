@@ -7,7 +7,7 @@
 namespace benchmark {
 
 
-template<class VType, size_t PAGE_SZ>
+template<class VType>
 class ExpMemoryManagement {
   cas::Context context_;
   const std::vector<cas::MemoryPlacement>& approaches_;

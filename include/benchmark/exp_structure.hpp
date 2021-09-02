@@ -6,7 +6,7 @@
 namespace benchmark {
 
 
-template<class VType, size_t PAGE_SZ>
+template<class VType>
 class ExpStructure {
   cas::Context context_;
 

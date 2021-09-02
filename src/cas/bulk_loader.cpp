@@ -14,26 +14,26 @@
 #include <unordered_map>
 
 
-template<class VType, size_t PAGE_SZ>
-cas::BulkLoader<VType, PAGE_SZ>::BulkLoader(
+template<class VType>
+cas::BulkLoader<VType>::BulkLoader(
       const cas::Context& context,
       cas::BulkLoaderStats& stats
     )
   : context_{context}
   , stats_{stats}
-  , mpool_(MemoryPools<PAGE_SZ>::Construct(context.mem_size_bytes_, context.mem_capacity_bytes_))
+  , mpool_(MemoryPools::Construct(context.mem_size_bytes_, context.mem_capacity_bytes_))
   , pager_(context.index_file_)
-  , shortened_key_buffer_(std::make_unique<std::array<std::byte, PAGE_SZ>>())
+  , shortened_key_buffer_(std::make_unique<std::array<std::byte, cas::PAGE_SZ>>())
   , serialization_buffer_(std::make_unique<std::array<uint8_t, 10'000'000>>())
 {
   for (int b = 0; b <= 0xFF; ++b) {
-    ref_keys_[b] = std::make_unique<std::array<std::byte, PAGE_SZ>>();
+    ref_keys_[b] = std::make_unique<std::array<std::byte, cas::PAGE_SZ>>();
   }
 }
 
 
-template<class VType, size_t PAGE_SZ>
-void cas::BulkLoader<VType, PAGE_SZ>::Load() {
+template<class VType>
+void cas::BulkLoader<VType>::Load() {
   start_time_global = std::chrono::high_resolution_clock::now();
 
   // create the partition folder if it doesn't exist
@@ -50,7 +50,7 @@ void cas::BulkLoader<VType, PAGE_SZ>::Load() {
   pager_.Clear();
 
   // Initialize the root partition
-  cas::Partition<PAGE_SZ> partition{context_.input_filename_, stats_, context_};
+  cas::Partition partition{context_.input_filename_, stats_, context_};
   InitializeRootPartition(partition);
 
   // Compute the root's discriminative byte
@@ -92,8 +92,8 @@ void cas::BulkLoader<VType, PAGE_SZ>::Load() {
 
 
 
-template<class VType, size_t PAGE_SZ>
-void cas::BulkLoader<VType, PAGE_SZ>::Load(cas::Partition<PAGE_SZ>& partition) {
+template<class VType>
+void cas::BulkLoader<VType>::Load(cas::Partition& partition) {
   start_time_global = std::chrono::high_resolution_clock::now();
 
   // delete the index file if it already exists
@@ -137,9 +137,9 @@ void cas::BulkLoader<VType, PAGE_SZ>::Load(cas::Partition<PAGE_SZ>& partition) {
 }
 
 
-template<class VType, size_t PAGE_SZ>
-size_t cas::BulkLoader<VType, PAGE_SZ>::Construct(
-          cas::Partition<PAGE_SZ>& partition,
+template<class VType>
+size_t cas::BulkLoader<VType>::Construct(
+          cas::Partition& partition,
           cas::Dimension dimension,
           cas::Dimension par_dimension,
           int depth,
@@ -175,7 +175,7 @@ size_t cas::BulkLoader<VType, PAGE_SZ>::Construct(
   size_t next_pos = offset;
 
   {
-    MemoryPage<PAGE_SZ> io_page = mpool_.input_.Get();
+    MemoryPage io_page = mpool_.input_.Get();
     auto cursor = partition.Cursor(io_page);
     // make sure the page is read into io_page when NextPage is called
     cursor.FetchNextDiskPage();
@@ -227,7 +227,7 @@ size_t cas::BulkLoader<VType, PAGE_SZ>::Construct(
     }
 
     node.dimension_ = dimension;
-    PartitionTable<PAGE_SZ> table(partition_counter_, context_, stats_);
+    PartitionTable table(partition_counter_, context_, stats_);
     PsiPartition(table, partition, dimension);
 
     if (context_.print_root_partition_table_allocation_ && depth == 0) {
@@ -265,15 +265,15 @@ size_t cas::BulkLoader<VType, PAGE_SZ>::Construct(
 
 
 // add all the partial keys and their references
-template<class VType, size_t PAGE_SZ>
-void cas::BulkLoader<VType, PAGE_SZ>::ConstructLeafNode(
+template<class VType>
+void cas::BulkLoader<VType>::ConstructLeafNode(
       Node& node,
-      cas::Partition<PAGE_SZ>& partition) {
+      cas::Partition& partition) {
   auto start = std::chrono::high_resolution_clock::now();
   size_t dsc_p = partition.DscP();
   size_t dsc_v = partition.DscV();
   // iterate & delete every page in the partition
-  MemoryPage<PAGE_SZ> io_page = mpool_.input_.Get();
+  MemoryPage io_page = mpool_.input_.Get();
   auto cursor = partition.Cursor(io_page);
   while (cursor.HasNext()) {
     auto page = cursor.RemoveNextPage();
@@ -305,10 +305,10 @@ void cas::BulkLoader<VType, PAGE_SZ>::ConstructLeafNode(
 }
 
 
-template<class VType, size_t PAGE_SZ>
-void cas::BulkLoader<VType, PAGE_SZ>::PsiPartition(
-        cas::PartitionTable<PAGE_SZ>& table,
-        cas::Partition<PAGE_SZ>& partition,
+template<class VType>
+void cas::BulkLoader<VType>::PsiPartition(
+        cas::PartitionTable& table,
+        cas::Partition& partition,
         const cas::Dimension dimension) {
   auto start = std::chrono::high_resolution_clock::now();
   // we need to remember this now before we mutate partition
@@ -316,12 +316,12 @@ void cas::BulkLoader<VType, PAGE_SZ>::PsiPartition(
   bool is_disk_only = partition.IsDiskOnly();
   bool is_hybrid = partition.IsHybrid();
   // prepare the input & output pages
-  std::vector<cas::MemoryPage<PAGE_SZ>> pages;
+  std::vector<cas::MemoryPage> pages;
   pages.reserve(cas::BYTE_MAX);
   for (size_t i = 0; i < cas::BYTE_MAX; ++i) {
     pages.emplace_back(nullptr);
   }
-  MemoryPage<PAGE_SZ> io_page = mpool_.input_.Get();
+  MemoryPage io_page = mpool_.input_.Get();
   // decide if we want to use memory pages at all during
   // this partitioning step
   bool use_memory_pages =
@@ -529,8 +529,8 @@ void cas::BulkLoader<VType, PAGE_SZ>::PsiPartition(
 }
 
 
-template<class VType, size_t PAGE_SZ>
-size_t cas::BulkLoader<VType, PAGE_SZ>::SerializeNode(Node& node) {
+template<class VType>
+size_t cas::BulkLoader<VType>::SerializeNode(Node& node) {
   auto& buffer = *serialization_buffer_.get();
 
   constexpr size_t path_limit    = (1ul << 12) - 1;
@@ -613,8 +613,8 @@ size_t cas::BulkLoader<VType, PAGE_SZ>::SerializeNode(Node& node) {
 }
 
 
-template<class VType, size_t PAGE_SZ>
-void cas::BulkLoader<VType, PAGE_SZ>::CopyToSerializationBuffer(
+template<class VType>
+void cas::BulkLoader<VType>::CopyToSerializationBuffer(
     size_t& offset, const void* src, size_t count) {
   if (offset + count > serialization_buffer_->size()) {
     auto msg = "address violation: " + std::to_string(offset+count);
@@ -625,8 +625,8 @@ void cas::BulkLoader<VType, PAGE_SZ>::CopyToSerializationBuffer(
 }
 
 
-template<class VType, size_t PAGE_SZ>
-size_t cas::BulkLoader<VType, PAGE_SZ>::Node::ByteSize(int nr_children) const {
+template<class VType>
+size_t cas::BulkLoader<VType>::Node::ByteSize(int nr_children) const {
   size_t size = 0;
   // header (dimension: 2 bits, l_P: 12 bits, l_V: 4 bits, m: 14 bits)
   size += 4;
@@ -651,8 +651,8 @@ size_t cas::BulkLoader<VType, PAGE_SZ>::Node::ByteSize(int nr_children) const {
 }
 
 
-template<class VType, size_t PAGE_SZ>
-void cas::BulkLoader<VType, PAGE_SZ>::Node::Dump() const {
+template<class VType>
+void cas::BulkLoader<VType>::Node::Dump() const {
   std::cout << "(Node)";
   std::cout << "\ndimension_: ";
   switch (dimension_) {
@@ -677,9 +677,9 @@ void cas::BulkLoader<VType, PAGE_SZ>::Node::Dump() const {
 }
 
 
-template<class VType, size_t PAGE_SZ>
-void cas::BulkLoader<VType, PAGE_SZ>::UpdatePartitionStats(
-        const cas::Partition<PAGE_SZ>& partition) {
+template<class VType>
+void cas::BulkLoader<VType>::UpdatePartitionStats(
+        const cas::Partition& partition) {
   ++stats_.partitions_created_;
   if (partition.IsMemoryOnly()) {
     ++stats_.partitions_memory_only_;
@@ -691,13 +691,13 @@ void cas::BulkLoader<VType, PAGE_SZ>::UpdatePartitionStats(
 }
 
 
-template<class VType, size_t PAGE_SZ>
-void cas::BulkLoader<VType, PAGE_SZ>::DscByte(
-    cas::Partition<PAGE_SZ>& partition) {
-  auto buffer = std::make_unique<std::array<std::byte, PAGE_SZ>>();
+template<class VType>
+void cas::BulkLoader<VType>::DscByte(
+    cas::Partition& partition) {
+  auto buffer = std::make_unique<std::array<std::byte, cas::PAGE_SZ>>();
   bool is_first_key = true;
   BinaryKey ref_key{buffer->data()};
-  MemoryPage<PAGE_SZ> io_page = mpool_.input_.Get();
+  MemoryPage io_page = mpool_.input_.Get();
   auto cursor = partition.Cursor(io_page);
   while (cursor.HasNext()) {
     auto& page = cursor.NextPage();
@@ -727,21 +727,21 @@ void cas::BulkLoader<VType, PAGE_SZ>::DscByte(
 }
 
 
-template<class VType, size_t PAGE_SZ>
-void cas::BulkLoader<VType, PAGE_SZ>::DscByteByByte(
-    cas::Partition<PAGE_SZ>& partition) {
+template<class VType>
+void cas::BulkLoader<VType>::DscByteByByte(
+    cas::Partition& partition) {
 
   int dsc_P = 0;
   int dsc_V = 0;
 
   // storage for reference key
-  auto buffer = std::make_unique<std::array<std::byte, PAGE_SZ>>();
+  auto buffer = std::make_unique<std::array<std::byte, cas::PAGE_SZ>>();
   BinaryKey ref_key{buffer->data()};
   bool is_first_key = true;
 
   bool dsc_P_found = false;
   bool dsc_V_found = false;
-  MemoryPage<PAGE_SZ> io_page = mpool_.input_.Get();
+  MemoryPage io_page = mpool_.input_.Get();
   while (!dsc_P_found || !dsc_V_found) {
     auto cursor = partition.Cursor(io_page);
     while (cursor.HasNext() && (!dsc_P_found || !dsc_V_found)) {
@@ -772,9 +772,9 @@ void cas::BulkLoader<VType, PAGE_SZ>::DscByteByByte(
 }
 
 
-template<class VType, size_t PAGE_SZ>
-void cas::BulkLoader<VType, PAGE_SZ>::InitializeRootPartition(
-      cas::Partition<PAGE_SZ>& partition) {
+template<class VType>
+void cas::BulkLoader<VType>::InitializeRootPartition(
+      cas::Partition& partition) {
   // declare it the root partition
   partition.IsRootPartition(true);
 
@@ -784,8 +784,8 @@ void cas::BulkLoader<VType, PAGE_SZ>::InitializeRootPartition(
 
   // decide how many input pages are processed
   size_t last_disk_page_nr = context_.dataset_size_ > 0
-    ? context_.dataset_size_ / PAGE_SZ
-    : std::filesystem::file_size(partition.Filename()) / PAGE_SZ;
+    ? context_.dataset_size_ / cas::PAGE_SZ
+    : std::filesystem::file_size(partition.Filename()) / cas::PAGE_SZ;
 
   // decide if we want to use memory pages for the root partition
   bool use_memory_pages =
@@ -819,8 +819,4 @@ void cas::BulkLoader<VType, PAGE_SZ>::InitializeRootPartition(
 /* template class cas::BulkLoader<cas::vstring_t, cas::PAGE_SZ>; */
 
 
-template class cas::BulkLoader<cas::vint64_t, cas::PAGE_SZ_64KB>;
-template class cas::BulkLoader<cas::vint64_t, cas::PAGE_SZ_32KB>;
-template class cas::BulkLoader<cas::vint64_t, cas::PAGE_SZ_16KB>;
-template class cas::BulkLoader<cas::vint64_t, cas::PAGE_SZ_8KB>;
-template class cas::BulkLoader<cas::vint64_t, cas::PAGE_SZ_4KB>;
+template class cas::BulkLoader<cas::vint64_t>;

@@ -6,16 +6,14 @@
 #include <sys/mman.h>
 
 
-template<size_t PAGE_SZ>
-cas::MemoryPools<PAGE_SZ>
-cas::MemoryPools<PAGE_SZ>::Construct(
+cas::MemoryPools cas::MemoryPools::Construct(
     size_t max_memory,
     size_t memory_capacity)
 {
   if (0 < memory_capacity && memory_capacity < max_memory) {
     throw std::bad_alloc();
   }
-  size_t available_pages = max_memory / PAGE_SZ;
+  size_t available_pages = max_memory / cas::PAGE_SZ;
   if (available_pages < 1 + cas::BYTE_MAX) {
     throw std::bad_alloc();
   }
@@ -29,7 +27,7 @@ cas::MemoryPools<PAGE_SZ>::Construct(
   size_t work_sz = available_pages;
   // see how many pages are left that can be occupied
   size_t cache_killer_sz = 0;
-  size_t total_pages = memory_capacity / PAGE_SZ;
+  size_t total_pages = memory_capacity / cas::PAGE_SZ;
   if (total_pages > (input_sz + output_sz + work_sz)) {
     cache_killer_sz = total_pages - (input_sz + output_sz + work_sz);
   }
@@ -37,16 +35,15 @@ cas::MemoryPools<PAGE_SZ>::Construct(
 }
 
 
-template<size_t PAGE_SZ>
-cas::MemoryPool<PAGE_SZ>::MemoryPool(size_t max_pages, MemoryPageType type)
+cas::MemoryPool::MemoryPool(size_t max_pages, MemoryPageType type)
   : max_pages_(max_pages)
   , type_(type)
 {
-  if (max_pages * PAGE_SZ <= 0) {
+  if (max_pages * cas::PAGE_SZ <= 0) {
     address_ = nullptr;
     return;
   }
-  address_ = static_cast<std::byte*>(mmap(NULL, max_pages * PAGE_SZ,
+  address_ = static_cast<std::byte*>(mmap(NULL, max_pages * cas::PAGE_SZ,
       PROT_READ | PROT_WRITE,
       MAP_PRIVATE | MAP_ANONYMOUS,
       -1, 0));
@@ -56,17 +53,16 @@ cas::MemoryPool<PAGE_SZ>::MemoryPool(size_t max_pages, MemoryPageType type)
   }
   pages_.reserve(max_pages_);
   for (size_t i = 0; i < max_pages_; ++i) {
-    pages_.emplace_back(address_ + i * PAGE_SZ);
+    pages_.emplace_back(address_ + i * cas::PAGE_SZ);
     pages_.back().Type(type);
   }
 }
 
-template<size_t PAGE_SZ>
-cas::MemoryPool<PAGE_SZ>::~MemoryPool() {
+cas::MemoryPool::~MemoryPool() {
   if (address_ == nullptr) {
     return;
   }
-  int rt = munmap(address_, max_pages_ * PAGE_SZ);
+  int rt = munmap(address_, max_pages_ * cas::PAGE_SZ);
   if (rt < 0) {
     std::cerr << "could not munmap allocated memory" << std::endl;
     std::terminate();
@@ -74,8 +70,7 @@ cas::MemoryPool<PAGE_SZ>::~MemoryPool() {
 }
 
 
-template<size_t PAGE_SZ>
-cas::MemoryPage<PAGE_SZ> cas::MemoryPool<PAGE_SZ>::Get() {
+cas::MemoryPage cas::MemoryPool::Get() {
   if (pages_.empty()) {
     throw std::bad_alloc();
   }
@@ -87,8 +82,7 @@ cas::MemoryPage<PAGE_SZ> cas::MemoryPool<PAGE_SZ>::Get() {
 }
 
 
-template<size_t PAGE_SZ>
-void cas::MemoryPool<PAGE_SZ>::Release(MemoryPage<PAGE_SZ>&& page) {
+void cas::MemoryPool::Release(MemoryPage&& page) {
   if (pages_.size() >= max_pages_) {
     throw std::runtime_error{"pool capacity reached (" + std::to_string(max_pages_) + ")"};
   }
@@ -96,8 +90,7 @@ void cas::MemoryPool<PAGE_SZ>::Release(MemoryPage<PAGE_SZ>&& page) {
 }
 
 
-template<size_t PAGE_SZ>
-void cas::MemoryPools<PAGE_SZ>::Dump() {
+void cas::MemoryPools::Dump() {
   std::cout << "MemoryPool (";
   std::cout << "input: " <<
     input_.NrUsedPages() << "/" << input_.Capacity() << "; ";
@@ -110,22 +103,8 @@ void cas::MemoryPools<PAGE_SZ>::Dump() {
 }
 
 
-template<size_t PAGE_SZ>
-void cas::MemoryPool<PAGE_SZ>::FillWithZeros() {
+void cas::MemoryPool::FillWithZeros() {
   for (auto& page : pages_) {
-    std::memset(page.Data(), 0, PAGE_SZ);
+    std::memset(page.Data(), 0, cas::PAGE_SZ);
   }
 }
-
-
-template class cas::MemoryPool<cas::PAGE_SZ_64KB>;
-template class cas::MemoryPool<cas::PAGE_SZ_32KB>;
-template class cas::MemoryPool<cas::PAGE_SZ_16KB>;
-template class cas::MemoryPool<cas::PAGE_SZ_8KB>;
-template class cas::MemoryPool<cas::PAGE_SZ_4KB>;
-
-template class cas::MemoryPools<cas::PAGE_SZ_64KB>;
-template class cas::MemoryPools<cas::PAGE_SZ_32KB>;
-template class cas::MemoryPools<cas::PAGE_SZ_16KB>;
-template class cas::MemoryPools<cas::PAGE_SZ_8KB>;
-template class cas::MemoryPools<cas::PAGE_SZ_4KB>;

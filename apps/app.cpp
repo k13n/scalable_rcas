@@ -11,11 +11,11 @@
 #include "cas/query_executor.hpp"
 #include "cas/search_key.hpp"
 
-template<class VType, size_t PAGE_SZ>
+template<class VType>
 void CreateIndex(const cas::Context& context) {
   // create index
-  cas::Pager<PAGE_SZ> pager{context.index_file_};
-  cas::BulkLoader<VType, PAGE_SZ> bulk_loader{pager, context};
+  cas::Pager pager{context.index_file_};
+  cas::BulkLoader<VType> bulk_loader{pager, context};
   bulk_loader.Load();
 
   // print output
@@ -52,7 +52,6 @@ void ReadIndex(const cas::Context& context) {
 
 void DiskBasedIndex() {
   using VType = cas::vint64_t;
-  constexpr auto PAGE_SZ = cas::PAGE_SZ_16KB;
 
   // read input configuration
   cas::Context context = {
@@ -71,14 +70,13 @@ void DiskBasedIndex() {
   std::cout << std::endl;
 
   context.index_file_ = "/local/scratch/wellenzohn/workspace/indexes/index.100GB.bin.new";
-  /* CreateIndex<VType, PAGE_SZ>(context); */
+  /* CreateIndex<VType>(context); */
   ReadIndex<VType>(context);
 }
 
 
 void MemoryBasedIndex() {
   using VType = cas::vint64_t;
-  constexpr auto PAGE_SZ = cas::PAGE_SZ_16KB;
 
   cas::mem::Node* root = nullptr;
   size_t partitioning_threshold = 2;
@@ -86,11 +84,11 @@ void MemoryBasedIndex() {
   const std::string filename = "/local/scratch/wellenzohn/datasets/dataset.10GB.16384.partition";
   cas::BulkLoaderStats stats;
   cas::Context context;
-  cas::Partition<PAGE_SZ> partition{filename, stats, context};
+  cas::Partition partition{filename, stats, context};
 
   std::vector<std::byte> page_buffer;
-  page_buffer.resize(PAGE_SZ);
-  cas::MemoryPage<PAGE_SZ> io_page{&page_buffer[0]};
+  page_buffer.resize(cas::PAGE_SZ);
+  cas::MemoryPage io_page{&page_buffer[0]};
   auto cursor = partition.Cursor(io_page);
 
   /* cursor.FetchNextDiskPage(); */
@@ -147,7 +145,6 @@ void MemoryBasedIndex() {
 
 void TestIndexingPipeline() {
   using VType = cas::vint64_t;
-  constexpr auto PAGE_SZ = cas::PAGE_SZ_16KB;
 
   cas::Context context = {
     /* .input_filename_ = "/home/user/wellenzohn/datasets/dataset.16384.partition", */
@@ -161,13 +158,13 @@ void TestIndexingPipeline() {
     .partitioning_threshold_ = 200,
   };
 
-  cas::Index<VType, PAGE_SZ> index{context};
+  cas::Index<VType> index{context};
 
   cas::BulkLoaderStats stats;
-  cas::Partition<PAGE_SZ> partition{context.input_filename_, stats, context};
+  cas::Partition partition{context.input_filename_, stats, context};
   std::vector<std::byte> page_buffer;
-  page_buffer.resize(PAGE_SZ);
-  cas::MemoryPage<PAGE_SZ> io_page{&page_buffer[0]};
+  page_buffer.resize(cas::PAGE_SZ);
+  cas::MemoryPage io_page{&page_buffer[0]};
   auto cursor = partition.Cursor(io_page);
 
   size_t limit = 10'000'000;

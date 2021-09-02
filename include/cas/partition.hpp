@@ -11,12 +11,11 @@
 
 namespace cas {
 
-template<size_t PAGE_SZ>
 class Partition {
   /* core data, see paper */
   int dsc_p_;
   int dsc_v_;
-  std::forward_list<MemoryPage<PAGE_SZ>> mptr_;
+  std::forward_list<MemoryPage> mptr_;
   int fptr_ = -1;
   /* file meta information */
   std::string filename_;
@@ -45,9 +44,9 @@ public:
   Partition& operator=(Partition&& other) = delete;
 
   bool HasMemoryPage();
-  void PushToMemory(MemoryPage<PAGE_SZ>&& page);
-  MemoryPage<PAGE_SZ> PopFromMemory();
-  void PushToDisk(const MemoryPage<PAGE_SZ>& page);
+  void PushToMemory(MemoryPage&& page);
+  MemoryPage PopFromMemory();
+  void PushToDisk(const MemoryPage& page);
 
   /* Getters/Setters */
   void DscP(int dsc_p) { dsc_p_ = dsc_p; }
@@ -79,31 +78,31 @@ public:
   void Close() { CloseFile(); }
   void DeleteFile();
   void Dump();
-  void DumpDetailed(MemoryPage<PAGE_SZ>& io_page);
+  void DumpDetailed(MemoryPage& io_page);
 
 
 public:
   class Cursor {
-    Partition<PAGE_SZ>& p_;
-    typename std::forward_list<MemoryPage<PAGE_SZ>>::iterator mptr_it_;
-    typename std::forward_list<MemoryPage<PAGE_SZ>>::iterator mptr_it_prev_;
-    MemoryPage<PAGE_SZ>& io_page_{nullptr};
+    Partition& p_;
+    typename std::forward_list<MemoryPage>::iterator mptr_it_;
+    typename std::forward_list<MemoryPage>::iterator mptr_it_prev_;
+    MemoryPage& io_page_;
     size_t fptr_read_page_nr_;
     size_t fptr_last_page_nr_;
 
   public:
-    Cursor(Partition<PAGE_SZ>& partition,
-        MemoryPage<PAGE_SZ>& io_page,
+    Cursor(Partition& partition,
+        MemoryPage& io_page,
         size_t fptr_read_page_nr,
         size_t fptr_last_page_nr);
 
     bool HasNext();
     bool FetchNextDiskPage();
-    MemoryPage<PAGE_SZ>& NextPage();
-    MemoryPage<PAGE_SZ> RemoveNextPage();
+    MemoryPage& NextPage();
+    MemoryPage RemoveNextPage();
   };
 
-  Cursor Cursor(MemoryPage<PAGE_SZ>& io_page) {
+  Cursor Cursor(MemoryPage& io_page) {
     return {
       *this,
       io_page,
@@ -120,8 +119,8 @@ public:
 private:
   void OpenFile();
   void CloseFile();
-  int FWritePage(const MemoryPage<PAGE_SZ>& page, size_t page_nr);
-  int FReadPage(MemoryPage<PAGE_SZ>& page, size_t page_nr);
+  int FWritePage(const MemoryPage& page, size_t page_nr);
+  int FReadPage(MemoryPage& page, size_t page_nr);
 };
 
 } // namespace cas

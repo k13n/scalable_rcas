@@ -7,8 +7,7 @@
 #include <unistd.h>
 
 
-template<size_t PAGE_SZ>
-cas::Partition<PAGE_SZ>::Partition(const std::string& filename,
+cas::Partition::Partition(const std::string& filename,
     BulkLoaderStats& stats, const cas::Context& context)
   : filename_(filename)
   , stats_(stats)
@@ -17,14 +16,12 @@ cas::Partition<PAGE_SZ>::Partition(const std::string& filename,
 
 
 
-template<size_t PAGE_SZ>
-bool cas::Partition<PAGE_SZ>::HasMemoryPage() {
+bool cas::Partition::HasMemoryPage() {
   return !mptr_.empty();
 }
 
 
-template<size_t PAGE_SZ>
-cas::MemoryPage<PAGE_SZ> cas::Partition<PAGE_SZ>::PopFromMemory() {
+cas::MemoryPage cas::Partition::PopFromMemory() {
   --nr_memory_pages_;
   auto page = std::move(mptr_.front());
   mptr_.pop_front();
@@ -32,18 +29,16 @@ cas::MemoryPage<PAGE_SZ> cas::Partition<PAGE_SZ>::PopFromMemory() {
 }
 
 
-template<size_t PAGE_SZ>
-void cas::Partition<PAGE_SZ>::PushToMemory(
-    cas::MemoryPage<PAGE_SZ>&& page) {
+void cas::Partition::PushToMemory(
+    cas::MemoryPage&& page) {
   nr_keys_ += page.NrKeys();
   ++nr_memory_pages_;
   mptr_.push_front(std::move(page));
 }
 
 
-template<size_t PAGE_SZ>
-void cas::Partition<PAGE_SZ>::PushToDisk(
-    const MemoryPage<PAGE_SZ>& page) {
+void cas::Partition::PushToDisk(
+    const MemoryPage& page) {
   nr_keys_ += page.NrKeys();
   ++nr_disk_pages_;
   if (fptr_ == -1) {
@@ -60,8 +55,7 @@ void cas::Partition<PAGE_SZ>::PushToDisk(
 }
 
 
-template<size_t PAGE_SZ>
-void cas::Partition<PAGE_SZ>::OpenFile() {
+void cas::Partition::OpenFile() {
   if (!std::filesystem::exists(filename_)) {
     ++stats_.files_created_;
   }
@@ -77,8 +71,7 @@ void cas::Partition<PAGE_SZ>::OpenFile() {
 }
 
 
-template<size_t PAGE_SZ>
-void cas::Partition<PAGE_SZ>::CloseFile() {
+void cas::Partition::CloseFile() {
   if (fptr_ == -1) {
     return;
   }
@@ -95,23 +88,21 @@ void cas::Partition<PAGE_SZ>::CloseFile() {
 }
 
 
-template<size_t PAGE_SZ>
-void cas::Partition<PAGE_SZ>::DeleteFile() {
+void cas::Partition::DeleteFile() {
   CloseFile();
   std::filesystem::remove(filename_);
 }
 
 
-template<size_t PAGE_SZ>
-int cas::Partition<PAGE_SZ>::FWritePage(
-    const MemoryPage<PAGE_SZ>& page,
+int cas::Partition::FWritePage(
+    const MemoryPage& page,
     size_t page_nr) {
   auto start = std::chrono::high_resolution_clock::now();
   int err;
 
-  int bytes_written = pwrite(fptr_, page.Data(), PAGE_SZ, page_nr * PAGE_SZ);
-  if (bytes_written == PAGE_SZ) {
-    stats_.partition_bytes_written_ += PAGE_SZ;
+  int bytes_written = pwrite(fptr_, page.Data(), cas::PAGE_SZ, page_nr * cas::PAGE_SZ);
+  if (bytes_written == cas::PAGE_SZ) {
+    stats_.partition_bytes_written_ += cas::PAGE_SZ;
     ++stats_.mem_pages_written_;
     err = 0;
   } else {
@@ -123,16 +114,15 @@ int cas::Partition<PAGE_SZ>::FWritePage(
 }
 
 
-template<size_t PAGE_SZ>
-int cas::Partition<PAGE_SZ>::FReadPage(
-    MemoryPage<PAGE_SZ>& page,
+int cas::Partition::FReadPage(
+    MemoryPage& page,
     size_t page_nr) {
   auto start = std::chrono::high_resolution_clock::now();
   int err;
 
-  int bytes_read = pread(fptr_, page.Data(), PAGE_SZ, page_nr * PAGE_SZ);
-  if (bytes_read == PAGE_SZ) {
-    stats_.partition_bytes_read_ += PAGE_SZ;
+  int bytes_read = pread(fptr_, page.Data(), cas::PAGE_SZ, page_nr * cas::PAGE_SZ);
+  if (bytes_read == cas::PAGE_SZ) {
+    stats_.partition_bytes_read_ += cas::PAGE_SZ;
     ++stats_.mem_pages_read_;
     err = 0;
   } else {
@@ -145,10 +135,9 @@ int cas::Partition<PAGE_SZ>::FReadPage(
 
 
 
-template<size_t PAGE_SZ>
-cas::Partition<PAGE_SZ>::Cursor::Cursor(
-        cas::Partition<PAGE_SZ>& partition,
-        MemoryPage<PAGE_SZ>& io_page,
+cas::Partition::Cursor::Cursor(
+        cas::Partition& partition,
+        MemoryPage& io_page,
         size_t fptr_read_page_nr,
         size_t fptr_last_page_nr)
   : p_(partition)
@@ -164,8 +153,7 @@ cas::Partition<PAGE_SZ>::Cursor::Cursor(
 }
 
 
-template<size_t PAGE_SZ>
-bool cas::Partition<PAGE_SZ>::Cursor::HasNext() {
+bool cas::Partition::Cursor::HasNext() {
   if (mptr_it_ != p_.mptr_.end()) {
     return true;
   }
@@ -173,8 +161,7 @@ bool cas::Partition<PAGE_SZ>::Cursor::HasNext() {
 }
 
 
-template<size_t PAGE_SZ>
-bool cas::Partition<PAGE_SZ>::Cursor::FetchNextDiskPage() {
+bool cas::Partition::Cursor::FetchNextDiskPage() {
   if (p_.fptr_ != -1 && fptr_read_page_nr_ < fptr_last_page_nr_) {
     int rt = p_.FReadPage(io_page_, fptr_read_page_nr_);
     if (rt == 0) {
@@ -186,8 +173,7 @@ bool cas::Partition<PAGE_SZ>::Cursor::FetchNextDiskPage() {
 }
 
 
-template<size_t PAGE_SZ>
-cas::MemoryPage<PAGE_SZ>& cas::Partition<PAGE_SZ>::Cursor::NextPage() {
+cas::MemoryPage& cas::Partition::Cursor::NextPage() {
   if (mptr_it_ != p_.mptr_.end()) {
     auto& page = *mptr_it_;
     ++mptr_it_;
@@ -200,22 +186,20 @@ cas::MemoryPage<PAGE_SZ>& cas::Partition<PAGE_SZ>::Cursor::NextPage() {
 }
 
 
- template<size_t PAGE_SZ>
- cas::MemoryPage<PAGE_SZ> cas::Partition<PAGE_SZ>::Cursor::RemoveNextPage() {
-   if (mptr_it_ != p_.mptr_.end()) {
-     auto page = std::move(*mptr_it_);
-     mptr_it_++;
-     p_.mptr_.erase_after(mptr_it_prev_);
-     return page;
-   } else {
-     // the io_page_ was already fetched in HasNext()
-     return std::move(io_page_);
-   }
- }
+cas::MemoryPage cas::Partition::Cursor::RemoveNextPage() {
+  if (mptr_it_ != p_.mptr_.end()) {
+    auto page = std::move(*mptr_it_);
+    mptr_it_++;
+    p_.mptr_.erase_after(mptr_it_prev_);
+    return page;
+  } else {
+    // the io_page_ was already fetched in HasNext()
+    return std::move(io_page_);
+  }
+}
 
 
-template<size_t PAGE_SZ>
-void cas::Partition<PAGE_SZ>::Dump() {
+void cas::Partition::Dump() {
   std::cout << "DscP: " << dsc_p_;
   std::cout << "\nDscV: " << dsc_v_;
   std::cout << "\nmptr: " << (mptr_.empty()   ? "<nil>" : "<exists>");
@@ -224,8 +208,7 @@ void cas::Partition<PAGE_SZ>::Dump() {
 }
 
 
-template<size_t PAGE_SZ>
-void cas::Partition<PAGE_SZ>::DumpDetailed(cas::MemoryPage<PAGE_SZ>& io_page) {
+void cas::Partition::DumpDetailed(cas::MemoryPage& io_page) {
   Dump();
   auto cursor = Cursor(io_page);
   while (cursor.HasNext()) {
@@ -237,26 +220,16 @@ void cas::Partition<PAGE_SZ>::DumpDetailed(cas::MemoryPage<PAGE_SZ>& io_page) {
 }
 
 
-template<size_t PAGE_SZ>
-bool cas::Partition<PAGE_SZ>::IsMemoryOnly() const {
+bool cas::Partition::IsMemoryOnly() const {
   return !mptr_.empty() && !std::filesystem::exists(filename_);
 }
 
 
-template<size_t PAGE_SZ>
-bool cas::Partition<PAGE_SZ>::IsDiskOnly() const {
+bool cas::Partition::IsDiskOnly() const {
   return mptr_.empty() && std::filesystem::exists(filename_);
 }
 
 
-template<size_t PAGE_SZ>
-bool cas::Partition<PAGE_SZ>::IsHybrid() const {
+bool cas::Partition::IsHybrid() const {
   return !mptr_.empty() && std::filesystem::exists(filename_);
 }
-
-
-template class cas::Partition<cas::PAGE_SZ_64KB>;
-template class cas::Partition<cas::PAGE_SZ_32KB>;
-template class cas::Partition<cas::PAGE_SZ_16KB>;
-template class cas::Partition<cas::PAGE_SZ_8KB>;
-template class cas::Partition<cas::PAGE_SZ_4KB>;

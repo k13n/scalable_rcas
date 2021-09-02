@@ -7,7 +7,7 @@
 namespace benchmark {
 
 
-template<class VType, size_t PAGE_SZ>
+template<class VType>
 class ExpDatasetSize {
   cas::Context context_;
   const std::vector<size_t>& dataset_sizes_;

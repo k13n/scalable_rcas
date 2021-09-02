@@ -4,7 +4,6 @@
 
 int main_(int argc, char** argv) {
   using VType = cas::vint64_t;
-  constexpr auto PAGE_SZ = cas::PAGE_SZ_16KB;
 
   // read input configuration
   auto context = benchmark::option_parser::Parse(argc, argv);
@@ -13,7 +12,7 @@ int main_(int argc, char** argv) {
 
   // create index
   cas::BulkLoaderStats stats;
-  cas::BulkLoader<VType, PAGE_SZ> bulk_loader{context, stats};
+  cas::BulkLoader<VType> bulk_loader{context, stats};
   bulk_loader.Load();
 
   // print output

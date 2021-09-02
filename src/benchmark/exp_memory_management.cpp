@@ -3,8 +3,8 @@
 #include "cas/util.hpp"
 
 
-template<class VType, size_t PAGE_SZ>
-benchmark::ExpMemoryManagement<VType, PAGE_SZ>::ExpMemoryManagement(
+template<class VType>
+benchmark::ExpMemoryManagement<VType>::ExpMemoryManagement(
       const cas::Context& context,
       const std::vector<cas::MemoryPlacement>& approaches,
       const std::vector<size_t>& memory_sizes)
@@ -15,8 +15,8 @@ benchmark::ExpMemoryManagement<VType, PAGE_SZ>::ExpMemoryManagement(
 }
 
 
-template<class VType, size_t PAGE_SZ>
-void benchmark::ExpMemoryManagement<VType, PAGE_SZ>::Execute() {
+template<class VType>
+void benchmark::ExpMemoryManagement<VType>::Execute() {
   cas::util::Log("Experiment ExpMemoryManagement\n\n");
   for (const auto& memory_size : memory_sizes_) {
     for (const auto& approach : approaches_) {
@@ -27,8 +27,8 @@ void benchmark::ExpMemoryManagement<VType, PAGE_SZ>::Execute() {
 }
 
 
-template<class VType, size_t PAGE_SZ>
-void benchmark::ExpMemoryManagement<VType, PAGE_SZ>::ExecuteMethod(
+template<class VType>
+void benchmark::ExpMemoryManagement<VType>::ExecuteMethod(
       cas::MemoryPlacement method, size_t memory_size)
 {
   // copy the context;
@@ -43,7 +43,7 @@ void benchmark::ExpMemoryManagement<VType, PAGE_SZ>::ExecuteMethod(
 
   // run benchmark
   cas::BulkLoaderStats stats;
-  cas::BulkLoader<VType, PAGE_SZ> bulk_loader{context, stats};
+  cas::BulkLoader<VType> bulk_loader{context, stats};
   bulk_loader.Load();
 
   // print output
@@ -55,8 +55,8 @@ void benchmark::ExpMemoryManagement<VType, PAGE_SZ>::ExecuteMethod(
 }
 
 
-template<class VType, size_t PAGE_SZ>
-void benchmark::ExpMemoryManagement<VType, PAGE_SZ>::PrintOutput() {
+template<class VType>
+void benchmark::ExpMemoryManagement<VType>::PrintOutput() {
   std::cout << "\n\n\n";
   cas::util::Log("Summary:\n\n");
   std::cout << "approach;memory_size_;runtime_ms;runtime_h;disk_overhead_b;disk_overhead_gb;disk_io_b;disk_io_gb\n";
@@ -82,8 +82,4 @@ void benchmark::ExpMemoryManagement<VType, PAGE_SZ>::PrintOutput() {
   std::cout << "\n\n\n";
 }
 
-template class benchmark::ExpMemoryManagement<cas::vint64_t, cas::PAGE_SZ_64KB>;
-template class benchmark::ExpMemoryManagement<cas::vint64_t, cas::PAGE_SZ_32KB>;
-template class benchmark::ExpMemoryManagement<cas::vint64_t, cas::PAGE_SZ_16KB>;
-template class benchmark::ExpMemoryManagement<cas::vint64_t, cas::PAGE_SZ_8KB>;
-template class benchmark::ExpMemoryManagement<cas::vint64_t, cas::PAGE_SZ_4KB>;
+template class benchmark::ExpMemoryManagement<cas::vint64_t>;

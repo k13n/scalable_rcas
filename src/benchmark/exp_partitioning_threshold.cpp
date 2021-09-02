@@ -3,8 +3,8 @@
 #include "cas/util.hpp"
 
 
-template<class VType, size_t PAGE_SZ>
-benchmark::ExpPartitioningThreshold<VType, PAGE_SZ>::ExpPartitioningThreshold(
+template<class VType>
+benchmark::ExpPartitioningThreshold<VType>::ExpPartitioningThreshold(
       const cas::Context& context,
       const std::vector<size_t>& thresholds,
       const std::vector<size_t>& dataset_sizes)
@@ -15,8 +15,8 @@ benchmark::ExpPartitioningThreshold<VType, PAGE_SZ>::ExpPartitioningThreshold(
 }
 
 
-template<class VType, size_t PAGE_SZ>
-void benchmark::ExpPartitioningThreshold<VType, PAGE_SZ>::Execute() {
+template<class VType>
+void benchmark::ExpPartitioningThreshold<VType>::Execute() {
   cas::util::Log("Experiment ExpPartitioningThreshold\n\n");
   for (const auto& threshold : thresholds_) {
     for (const auto& dataset_size : dataset_sizes_) {
@@ -27,8 +27,8 @@ void benchmark::ExpPartitioningThreshold<VType, PAGE_SZ>::Execute() {
 }
 
 
-template<class VType, size_t PAGE_SZ>
-void benchmark::ExpPartitioningThreshold<VType, PAGE_SZ>::Execute(
+template<class VType>
+void benchmark::ExpPartitioningThreshold<VType>::Execute(
     size_t threshold,
     size_t dataset_size)
 {
@@ -44,7 +44,7 @@ void benchmark::ExpPartitioningThreshold<VType, PAGE_SZ>::Execute(
 
   // run benchmark
   cas::BulkLoaderStats stats;
-  cas::BulkLoader<VType, PAGE_SZ> bulk_loader{context, stats};
+  cas::BulkLoader<VType> bulk_loader{context, stats};
   bulk_loader.Load();
 
   // print output
@@ -57,8 +57,8 @@ void benchmark::ExpPartitioningThreshold<VType, PAGE_SZ>::Execute(
 }
 
 
-template<class VType, size_t PAGE_SZ>
-void benchmark::ExpPartitioningThreshold<VType, PAGE_SZ>::PrintOutput() {
+template<class VType>
+void benchmark::ExpPartitioningThreshold<VType>::PrintOutput() {
   std::cout << "\n\n\n";
   cas::util::Log("Summary:\n\n");
   std::cout << "threshold;dataset_size_b;nr_input_keys;runtime_ms;runtime_m;runtime_h;disk_overhead_b;disk_overhead_gb;disk_io_gb;partitions_created;index_bytes_written_b;index_bytes_written_gb\n";
@@ -84,8 +84,4 @@ void benchmark::ExpPartitioningThreshold<VType, PAGE_SZ>::PrintOutput() {
 }
 
 
-template class benchmark::ExpPartitioningThreshold<cas::vint64_t, cas::PAGE_SZ_64KB>;
-template class benchmark::ExpPartitioningThreshold<cas::vint64_t, cas::PAGE_SZ_32KB>;
-template class benchmark::ExpPartitioningThreshold<cas::vint64_t, cas::PAGE_SZ_16KB>;
-template class benchmark::ExpPartitioningThreshold<cas::vint64_t, cas::PAGE_SZ_8KB>;
-template class benchmark::ExpPartitioningThreshold<cas::vint64_t, cas::PAGE_SZ_4KB>;
+template class benchmark::ExpPartitioningThreshold<cas::vint64_t>;

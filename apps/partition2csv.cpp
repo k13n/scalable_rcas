@@ -10,33 +10,18 @@
 
 
 int main_(int argc, char** argv) {
-  size_t page_sz = 0;
   std::string input_filename = "";
   bool read_from_file = false;
 
-  // read page size
-  if (argc < 2) {
-    std::cerr << "First parameter: page size missing\n";
-    return 1;
-  } else {
-    if (1 != std::sscanf(argv[1], "%zu", &page_sz)) {
-      std::cerr << "First parameter: page size (integer)\n";
-      return 1;
-    }
-    if (page_sz % 4096 != 0) {
-      std::cerr << "Page size must be a multiple of 4096\n";
-      return 1;
-    }
-  }
   // check if input is coming from stdin or file
-  if (argc >= 3) {
+  if (argc >= 2) {
     read_from_file = true;
-    input_filename = std::string{argv[2]};
+    input_filename = std::string{argv[1]};
   }
 
   // create page as buffer
-  std::vector<std::byte> buffer{page_sz, std::byte{0}};
-  cas::MemoryPage<4096> page{&buffer[0]};
+  std::vector<std::byte> buffer{cas::PAGE_SZ, std::byte{0}};
+  cas::MemoryPage page{&buffer[0]};
   // buffer to store path&values
   cas::QueryBuffer buf_path;
   cas::QueryBuffer buf_value;
@@ -55,8 +40,8 @@ int main_(int argc, char** argv) {
 
   // process input
   while (true) {
-    size_t bytes_read = fread(page.Data(), 1, page_sz, infile);
-    if (bytes_read < page_sz) {
+    size_t bytes_read = fread(page.Data(), 1, cas::PAGE_SZ, infile);
+    if (bytes_read < cas::PAGE_SZ) {
       break;
     }
     for (const auto& bkey : page) {

@@ -9,9 +9,9 @@ namespace cas {
 
 
 
-template<class VType, size_t PAGE_SZ>
+template<class VType>
 class LinearSearch {
-  Partition<PAGE_SZ>& partition_;
+  Partition& partition_;
   const BinarySK& key_;
   const cas::BinaryKeyEmitter& emitter_;
   std::unique_ptr<QueryBuffer> buf_pat_;
@@ -20,7 +20,7 @@ class LinearSearch {
 
 public:
   LinearSearch(
-      Partition<PAGE_SZ>& partition,
+      Partition& partition,
       const BinarySK& key,
       const cas::BinaryKeyEmitter& emitter);
 

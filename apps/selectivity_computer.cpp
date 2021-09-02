@@ -29,7 +29,7 @@ cas::SearchKey<cas::vint64_t> ParseQuery(
 
 template<class VType>
 class SelectivityComputer {
-  cas::Index<VType, cas::PAGE_SZ_16KB> index_;
+  cas::Index<VType> index_;
   size_t nr_keys_;
 
 public:

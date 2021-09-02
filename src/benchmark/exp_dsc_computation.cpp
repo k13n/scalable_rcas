@@ -3,8 +3,8 @@
 #include "cas/util.hpp"
 
 
-template<class VType, size_t PAGE_SZ>
-benchmark::ExpDscComputation<VType, PAGE_SZ>::ExpDscComputation(
+template<class VType>
+benchmark::ExpDscComputation<VType>::ExpDscComputation(
       const cas::Context& context,
       const std::vector<cas::DscComputation>& approaches,
       const std::vector<size_t>& memory_sizes)
@@ -15,8 +15,8 @@ benchmark::ExpDscComputation<VType, PAGE_SZ>::ExpDscComputation(
 }
 
 
-template<class VType, size_t PAGE_SZ>
-void benchmark::ExpDscComputation<VType, PAGE_SZ>::Execute() {
+template<class VType>
+void benchmark::ExpDscComputation<VType>::Execute() {
   cas::util::Log("Experiment ExpDscComputation\n\n");
   for (const auto& memory_size : memory_sizes_) {
     for (const auto& approach : approaches_) {
@@ -27,8 +27,8 @@ void benchmark::ExpDscComputation<VType, PAGE_SZ>::Execute() {
 }
 
 
-template<class VType, size_t PAGE_SZ>
-void benchmark::ExpDscComputation<VType, PAGE_SZ>::ExecuteMethod(
+template<class VType>
+void benchmark::ExpDscComputation<VType>::ExecuteMethod(
       cas::DscComputation method, size_t memory_size)
 {
   // copy the context;
@@ -43,7 +43,7 @@ void benchmark::ExpDscComputation<VType, PAGE_SZ>::ExecuteMethod(
 
   // run benchmark
   cas::BulkLoaderStats stats;
-  cas::BulkLoader<VType, PAGE_SZ> bulk_loader{context, stats};
+  cas::BulkLoader<VType> bulk_loader{context, stats};
   bulk_loader.Load();
 
   // print output
@@ -55,8 +55,8 @@ void benchmark::ExpDscComputation<VType, PAGE_SZ>::ExecuteMethod(
 }
 
 
-/* template<class VType, size_t PAGE_SZ> */
-/* void benchmark::ExpDscComputation<VType, PAGE_SZ>::PrintOutput() { */
+/* template<class VType> */
+/* void benchmark::ExpDscComputation<VType>::PrintOutput() { */
 /*   std::cout << "\n\n\n"; */
 /*   cas::util::Log("Summary:\n\n"); */
 /*   std::cout << "approach;runtime_ms;runtime_h;disk_overhead_b;disk_overhead_gb\n"; */
@@ -75,8 +75,8 @@ void benchmark::ExpDscComputation<VType, PAGE_SZ>::ExecuteMethod(
 /* } */
 
 
-template<class VType, size_t PAGE_SZ>
-void benchmark::ExpDscComputation<VType, PAGE_SZ>::PrintOutput() {
+template<class VType>
+void benchmark::ExpDscComputation<VType>::PrintOutput() {
   std::cout << "\n\n\n";
   cas::util::Log("Summary:\n\n");
   std::cout << "approach;memory_size_;runtime_ms;runtime_h;disk_overhead_b;disk_overhead_gb;disk_io_b;disk_io_gb\n";
@@ -102,8 +102,4 @@ void benchmark::ExpDscComputation<VType, PAGE_SZ>::PrintOutput() {
   std::cout << "\n\n\n";
 }
 
-template class benchmark::ExpDscComputation<cas::vint64_t, cas::PAGE_SZ_64KB>;
-template class benchmark::ExpDscComputation<cas::vint64_t, cas::PAGE_SZ_32KB>;
-template class benchmark::ExpDscComputation<cas::vint64_t, cas::PAGE_SZ_16KB>;
-template class benchmark::ExpDscComputation<cas::vint64_t, cas::PAGE_SZ_8KB>;
-template class benchmark::ExpDscComputation<cas::vint64_t, cas::PAGE_SZ_4KB>;
+template class benchmark::ExpDscComputation<cas::vint64_t>;

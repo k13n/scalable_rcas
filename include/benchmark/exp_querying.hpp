@@ -3,7 +3,6 @@
 #include "cas/query_stats.hpp"
 #include "cas/search_key.hpp"
 #include "cas/context.hpp"
-#include "cas/page_buffer.hpp"
 #include "cas/pager.hpp"
 #include "cas/query.hpp"
 #include <vector>

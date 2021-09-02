@@ -15,6 +15,7 @@ const size_t PAGE_SZ_32KB  = 1l << 15;
 const size_t PAGE_SZ_16KB  = 1l << 14;
 const size_t PAGE_SZ_8KB   = 1l << 13;
 const size_t PAGE_SZ_4KB   = 1l << 12;
+const size_t PAGE_SZ        = PAGE_SZ_16KB;
 
 // info about index pages
 using page_nr_t = size_t;

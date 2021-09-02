@@ -3,8 +3,8 @@
 #include "cas/util.hpp"
 
 
-template<class VType, size_t PAGE_SZ>
-benchmark::ExpDatasetSize<VType, PAGE_SZ>::ExpDatasetSize(
+template<class VType>
+benchmark::ExpDatasetSize<VType>::ExpDatasetSize(
       const cas::Context& context,
       const std::vector<size_t>& dataset_sizes)
   : context_(context)
@@ -13,8 +13,8 @@ benchmark::ExpDatasetSize<VType, PAGE_SZ>::ExpDatasetSize(
 }
 
 
-template<class VType, size_t PAGE_SZ>
-void benchmark::ExpDatasetSize<VType, PAGE_SZ>::Execute() {
+template<class VType>
+void benchmark::ExpDatasetSize<VType>::Execute() {
   cas::util::Log("Experiment ExpDatasetSize\n\n");
   for (const auto& dataset_size : dataset_sizes_) {
     Execute(dataset_size);
@@ -23,8 +23,8 @@ void benchmark::ExpDatasetSize<VType, PAGE_SZ>::Execute() {
 }
 
 
-template<class VType, size_t PAGE_SZ>
-void benchmark::ExpDatasetSize<VType, PAGE_SZ>::Execute(size_t dataset_size)
+template<class VType>
+void benchmark::ExpDatasetSize<VType>::Execute(size_t dataset_size)
 {
   // copy the context;
   auto context = context_;
@@ -37,7 +37,7 @@ void benchmark::ExpDatasetSize<VType, PAGE_SZ>::Execute(size_t dataset_size)
 
   // run benchmark
   cas::BulkLoaderStats stats;
-  cas::BulkLoader<VType, PAGE_SZ> bulk_loader{context, stats};
+  cas::BulkLoader<VType> bulk_loader{context, stats};
   bulk_loader.Load();
 
   // print output
@@ -49,8 +49,8 @@ void benchmark::ExpDatasetSize<VType, PAGE_SZ>::Execute(size_t dataset_size)
 }
 
 
-template<class VType, size_t PAGE_SZ>
-void benchmark::ExpDatasetSize<VType, PAGE_SZ>::PrintOutput() {
+template<class VType>
+void benchmark::ExpDatasetSize<VType>::PrintOutput() {
   std::cout << "\n\n\n";
   cas::util::Log("Summary:\n\n");
   std::cout << "dataset_size_b;nr_input_keys;runtime_ms;runtime_m;runtime_h;disk_overhead_b;disk_overhead_gb;disk_io_gb\n";
@@ -73,8 +73,4 @@ void benchmark::ExpDatasetSize<VType, PAGE_SZ>::PrintOutput() {
   }
 }
 
-template class benchmark::ExpDatasetSize<cas::vint64_t, cas::PAGE_SZ_64KB>;
-template class benchmark::ExpDatasetSize<cas::vint64_t, cas::PAGE_SZ_32KB>;
-template class benchmark::ExpDatasetSize<cas::vint64_t, cas::PAGE_SZ_16KB>;
-template class benchmark::ExpDatasetSize<cas::vint64_t, cas::PAGE_SZ_8KB>;
-template class benchmark::ExpDatasetSize<cas::vint64_t, cas::PAGE_SZ_4KB>;
+template class benchmark::ExpDatasetSize<cas::vint64_t>;

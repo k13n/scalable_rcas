@@ -10,8 +10,8 @@
 #include <random>
 
 
-template<class VType, size_t PAGE_SZ>
-void cas::Index<VType, PAGE_SZ>::Insert(cas::BinaryKey key) {
+template<class VType>
+void cas::Index<VType>::Insert(cas::BinaryKey key) {
   cas::mem::Insertion insertion{&root_, key, context_.partitioning_threshold_};
   auto start = std::chrono::high_resolution_clock::now();
   insertion.Execute();
@@ -24,8 +24,8 @@ void cas::Index<VType, PAGE_SZ>::Insert(cas::BinaryKey key) {
 }
 
 
-template<class VType, size_t PAGE_SZ>
-void cas::Index<VType, PAGE_SZ>::HandleOverflow() {
+template<class VType>
+void cas::Index<VType>::HandleOverflow() {
   if (nr_memory_keys_ == 0) {
     return;
   }
@@ -40,7 +40,7 @@ void cas::Index<VType, PAGE_SZ>::HandleOverflow() {
     + "tmp_root_partition_"
     + std::to_string(dist(rng));;
 
-  Partition<PAGE_SZ> partition{partition_file, stats_, context_};
+  Partition partition{partition_file, stats_, context_};
   partition.IsRootPartition(true);
 
   // data needed to compute discriminative bytes of the new partition
@@ -51,10 +51,10 @@ void cas::Index<VType, PAGE_SZ>::HandleOverflow() {
 
   // create a function to store keys in the partition
   std::vector<std::byte> key_buffer;
-  key_buffer.resize(PAGE_SZ);
+  key_buffer.resize(cas::PAGE_SZ);
   std::vector<std::byte> page_buffer;
-  page_buffer.resize(PAGE_SZ);
-  cas::MemoryPage<PAGE_SZ> io_page{&page_buffer[0]};
+  page_buffer.resize(cas::PAGE_SZ);
+  cas::MemoryPage io_page{&page_buffer[0]};
   const auto emitter = [&](
           const cas::QueryBuffer& path, size_t p_len,
           const cas::QueryBuffer& value, size_t v_len,
@@ -135,7 +135,7 @@ void cas::Index<VType, PAGE_SZ>::HandleOverflow() {
   context_copy.root_dsc_P_ = dsc_p;
   context_copy.root_dsc_V_ = dsc_v;
   context_copy.delete_root_partition_ = true;
-  cas::BulkLoader<VType, PAGE_SZ> bulk_loader{context_copy, stats_};
+  cas::BulkLoader<VType> bulk_loader{context_copy, stats_};
   bulk_loader.Load(partition);
 
   // delete in-memory index
@@ -153,8 +153,8 @@ void cas::Index<VType, PAGE_SZ>::HandleOverflow() {
 }
 
 
-template<class VType, size_t PAGE_SZ>
-void cas::Index<VType, PAGE_SZ>::BulkLoad() {
+template<class VType>
+void cas::Index<VType>::BulkLoad() {
   ClearPipelineFiles();
   Context context_copy = context_;
 
@@ -167,7 +167,7 @@ void cas::Index<VType, PAGE_SZ>::BulkLoad() {
     + std::to_string(dist(rng));;
 
   // bulk-load index
-  cas::BulkLoader<VType, PAGE_SZ> bulk_loader{context_copy, stats_};
+  cas::BulkLoader<VType> bulk_loader{context_copy, stats_};
   stats_.nr_input_keys_ = 0;
   bulk_loader.Load();
 
@@ -182,8 +182,8 @@ void cas::Index<VType, PAGE_SZ>::BulkLoad() {
 }
 
 
-template<class VType, size_t PAGE_SZ>
-cas::QueryStats cas::Index<VType, PAGE_SZ>::Query(
+template<class VType>
+cas::QueryStats cas::Index<VType>::Query(
     const cas::SearchKey<VType>& key,
     const cas::BinaryKeyEmitter emitter)
 {
@@ -193,8 +193,8 @@ cas::QueryStats cas::Index<VType, PAGE_SZ>::Query(
 }
 
 
-template<class VType, size_t PAGE_SZ>
-cas::QueryStats cas::Index<VType, PAGE_SZ>::Query(
+template<class VType>
+cas::QueryStats cas::Index<VType>::Query(
     const cas::BinarySK& key,
     const cas::BinaryKeyEmitter emitter)
 {
@@ -227,8 +227,8 @@ cas::QueryStats cas::Index<VType, PAGE_SZ>::Query(
 
 
 
-template<class VType, size_t PAGE_SZ>
-void cas::Index<VType, PAGE_SZ>::DeleteNodesRecursively(cas::INode* node) {
+template<class VType>
+void cas::Index<VType>::DeleteNodesRecursively(cas::INode* node) {
   if (node == nullptr) {
     return;
   }
@@ -239,8 +239,8 @@ void cas::Index<VType, PAGE_SZ>::DeleteNodesRecursively(cas::INode* node) {
 }
 
 
-template<class VType, size_t PAGE_SZ>
-void cas::Index<VType, PAGE_SZ>::ClearPipelineFiles() {
+template<class VType>
+void cas::Index<VType>::ClearPipelineFiles() {
   // create the partition folder if it doesn't exist
   if (!std::filesystem::is_directory(context_.partition_folder_) ||
       !std::filesystem::exists(context_.partition_folder_)) {
@@ -263,8 +263,4 @@ void cas::Index<VType, PAGE_SZ>::ClearPipelineFiles() {
 }
 
 
-template class cas::Index<cas::vint64_t, cas::PAGE_SZ_64KB>;
-template class cas::Index<cas::vint64_t, cas::PAGE_SZ_32KB>;
-template class cas::Index<cas::vint64_t, cas::PAGE_SZ_16KB>;
-template class cas::Index<cas::vint64_t, cas::PAGE_SZ_8KB>;
-template class cas::Index<cas::vint64_t, cas::PAGE_SZ_4KB>;
+template class cas::Index<cas::vint64_t>;

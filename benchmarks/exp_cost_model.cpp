@@ -5,8 +5,7 @@
 
 void VaryInputSize(cas::Context context) {
   using VType = cas::vint64_t;
-  constexpr auto PAGE_SZ = cas::PAGE_SZ_16KB;
-  using Exp = benchmark::ExpDatasetSize<VType, PAGE_SZ>;
+  using Exp = benchmark::ExpDatasetSize<VType>;
 
   // fix memory size at 50GB
   context.mem_size_bytes_ = 50'000'000'000;
@@ -26,8 +25,7 @@ void VaryInputSize(cas::Context context) {
 
 void VaryMemorySize(cas::Context context) {
   using VType = cas::vint64_t;
-  constexpr auto PAGE_SZ = cas::PAGE_SZ_16KB;
-  using Exp = benchmark::ExpMemoryManagement<VType, PAGE_SZ>;
+  using Exp = benchmark::ExpMemoryManagement<VType>;
 
   std::vector<cas::MemoryPlacement> approaches = {
     cas::MemoryPlacement::FrontLoading,

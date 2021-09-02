@@ -8,11 +8,10 @@
 
 namespace cas {
 
-template<size_t PAGE_SZ>
 class MemoryPool {
   const size_t max_pages_;
   const MemoryPageType type_;
-  std::vector<MemoryPage<PAGE_SZ>> pages_;
+  std::vector<MemoryPage> pages_;
   std::byte* address_;
 
 public:
@@ -25,8 +24,8 @@ public:
   MemoryPool& operator=(const MemoryPool& other) = delete;
   MemoryPool& operator=(MemoryPool&& other) = delete;
 
-  MemoryPage<PAGE_SZ> Get();
-  void Release(MemoryPage<PAGE_SZ>&& page);
+  MemoryPage Get();
+  void Release(MemoryPage&& page);
 
   size_t NrFreePages() { return pages_.size(); }
   size_t NrUsedPages() { return max_pages_ - pages_.size(); }
@@ -38,7 +37,6 @@ public:
 };
 
 
-template<size_t PAGE_SZ>
 class MemoryPools {
 private:
   MemoryPools(
@@ -64,12 +62,12 @@ private:
   MemoryPools& operator=(MemoryPools&& other) = delete;
 
 public:
-  MemoryPool<PAGE_SZ> input_;
-  MemoryPool<PAGE_SZ> output_;
-  MemoryPool<PAGE_SZ> work_;
-  MemoryPool<PAGE_SZ> cache_killer_;
+  MemoryPool input_;
+  MemoryPool output_;
+  MemoryPool work_;
+  MemoryPool cache_killer_;
 
-  static MemoryPools<PAGE_SZ> Construct(
+  static MemoryPools Construct(
       size_t max_memory,
       size_t memory_capacity = 0);
 

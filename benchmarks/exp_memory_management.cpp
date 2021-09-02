@@ -3,8 +3,7 @@
 
 int main_(int argc, char** argv) {
   using VType = cas::vint64_t;
-  constexpr auto PAGE_SZ = cas::PAGE_SZ_16KB;
-  using Exp = benchmark::ExpMemoryManagement<VType, PAGE_SZ>;
+  using Exp = benchmark::ExpMemoryManagement<VType>;
 
   cas::Context context = {
     .use_direct_io_ = true,

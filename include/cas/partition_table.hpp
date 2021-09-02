@@ -7,9 +7,8 @@
 
 namespace cas {
 
-template<size_t PAGE_SZ>
 class PartitionTable {
-  typename std::array<std::unique_ptr<Partition<PAGE_SZ>>, BYTE_MAX> table_;
+  typename std::array<std::unique_ptr<Partition>, BYTE_MAX> table_;
   long& partition_counter_;
   const cas::Context& context_;
   BulkLoaderStats& stats_;
@@ -27,7 +26,7 @@ public:
   PartitionTable& operator=(const PartitionTable& other) = delete;
   PartitionTable& operator=(PartitionTable&& other) = delete;
 
-  Partition<PAGE_SZ>& operator[](int position);
+  Partition& operator[](int position);
   void InitializePartition(int position, int dsc_p, int dsc_v);
   /* void Insert(int position, BinaryKey&& key); */
   /* void InsertUnoptimized(int position, BinaryKey&& key); */

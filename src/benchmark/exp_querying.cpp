@@ -36,7 +36,7 @@ void benchmark::ExpQuerying<VType>::Execute() {
     cas::util::Log("Repetition " + std::to_string(i));
     cas::Context context;
     context.pipeline_dir_ = pipeline_dir_;
-    cas::Index<VType, cas::PAGE_SZ_16KB> index{context};
+    cas::Index<VType> index{context};
     for (const auto& search_key : encoded_queries_) {
       if (clear_page_cache_) {
         cas::util::ClearPageCache();

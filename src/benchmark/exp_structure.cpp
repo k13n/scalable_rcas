@@ -3,16 +3,16 @@
 #include "cas/index_stats.hpp"
 #include "cas/util.hpp"
 
-template<class VType, size_t PAGE_SZ>
-benchmark::ExpStructure<VType, PAGE_SZ>::ExpStructure(
+template<class VType>
+benchmark::ExpStructure<VType>::ExpStructure(
       const cas::Context& context)
   : context_(context)
 {
 }
 
 
-template<class VType, size_t PAGE_SZ>
-void benchmark::ExpStructure<VType, PAGE_SZ>::Execute() {
+template<class VType>
+void benchmark::ExpStructure<VType>::Execute() {
   cas::util::Log("Experiment ExpStructure\n\n");
 
   // configuration
@@ -25,7 +25,7 @@ void benchmark::ExpStructure<VType, PAGE_SZ>::Execute() {
 
   // run benchmark
   cas::BulkLoaderStats stats;
-  cas::BulkLoader<VType, PAGE_SZ> bulk_loader{context_, stats};
+  cas::BulkLoader<VType> bulk_loader{context_, stats};
   bulk_loader.Load();
 
   // print output
@@ -35,8 +35,8 @@ void benchmark::ExpStructure<VType, PAGE_SZ>::Execute() {
   std::cout << "\n";
 
   // collect some stats
-  cas::Pager<PAGE_SZ> pager{context_.index_file_};
-  cas::IndexStats<PAGE_SZ> index_stats{pager};
+  cas::Pager pager{context_.index_file_};
+  cas::IndexStats index_stats{pager};
   index_stats.Compute();
 
   PrintOutput(stats.node_fanout_, 32, 256, "Node Fanout");
@@ -49,8 +49,8 @@ void benchmark::ExpStructure<VType, PAGE_SZ>::Execute() {
   std::cout << "\n\n\n"; cas::util::Log("done");
 }
 
-template<class VType, size_t PAGE_SZ>
-void benchmark::ExpStructure<VType, PAGE_SZ>::PrintOutput(
+template<class VType>
+void benchmark::ExpStructure<VType>::PrintOutput(
     const cas::Histogram& histogram,
     int nr_bins,
     const std::string& msg)
@@ -59,8 +59,8 @@ void benchmark::ExpStructure<VType, PAGE_SZ>::PrintOutput(
 }
 
 
-template<class VType, size_t PAGE_SZ>
-void benchmark::ExpStructure<VType, PAGE_SZ>::PrintOutput(
+template<class VType>
+void benchmark::ExpStructure<VType>::PrintOutput(
     const cas::Histogram& histogram,
     int nr_bins,
     size_t upper_bound,
@@ -74,8 +74,4 @@ void benchmark::ExpStructure<VType, PAGE_SZ>::PrintOutput(
   histogram.Print(nr_bins, upper_bound);
 }
 
-template class benchmark::ExpStructure<cas::vint64_t, cas::PAGE_SZ_64KB>;
-template class benchmark::ExpStructure<cas::vint64_t, cas::PAGE_SZ_32KB>;
-template class benchmark::ExpStructure<cas::vint64_t, cas::PAGE_SZ_16KB>;
-template class benchmark::ExpStructure<cas::vint64_t, cas::PAGE_SZ_8KB>;
-template class benchmark::ExpStructure<cas::vint64_t, cas::PAGE_SZ_4KB>;
+template class benchmark::ExpStructure<cas::vint64_t>;

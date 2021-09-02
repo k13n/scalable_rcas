@@ -11,7 +11,7 @@
 namespace cas {
 
 
-template<class VType, size_t PAGE_SZ>
+template<class VType>
 class Index {
   const Context& context_;
   cas::BulkLoaderStats stats_;

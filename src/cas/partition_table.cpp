@@ -3,8 +3,7 @@
 #include <string>
 
 
-template<size_t PAGE_SZ>
-cas::PartitionTable<PAGE_SZ>::PartitionTable(
+cas::PartitionTable::PartitionTable(
       long& partition_counter,
       const cas::Context& context,
       BulkLoaderStats& stats)
@@ -14,11 +13,10 @@ cas::PartitionTable<PAGE_SZ>::PartitionTable(
 {}
 
 
-template<size_t PAGE_SZ>
-void cas::PartitionTable<PAGE_SZ>::InitializePartition(int position, int dsc_p, int dsc_v) {
+void cas::PartitionTable::InitializePartition(int position, int dsc_p, int dsc_v) {
   if (Absent(position)) {
     std::string filename = context_.partition_folder_ + std::to_string(partition_counter_++);
-    table_[position] = std::make_unique<cas::Partition<PAGE_SZ>>(
+    table_[position] = std::make_unique<cas::Partition>(
         filename, stats_, context_);
     table_[position]->DscP(dsc_p);
     table_[position]->DscV(dsc_v);
@@ -26,8 +24,7 @@ void cas::PartitionTable<PAGE_SZ>::InitializePartition(int position, int dsc_p, 
 }
 
 
-template<size_t PAGE_SZ>
-cas::Partition<PAGE_SZ>& cas::PartitionTable<PAGE_SZ>::operator[](int position) {
+cas::Partition& cas::PartitionTable::operator[](int position) {
   if (Absent(position)) {
     std::string error_msg = "partition at position " + std::to_string(position)
       + " does not exist";
@@ -37,8 +34,7 @@ cas::Partition<PAGE_SZ>& cas::PartitionTable<PAGE_SZ>::operator[](int position) 
 }
 
 
-template<size_t PAGE_SZ>
-int cas::PartitionTable<PAGE_SZ>::NrPartitions() {
+int cas::PartitionTable::NrPartitions() {
   int nr_partitions = 0;
   for (int i = 0x00; i <= 0xFF; ++i) {
     if (Exists(i)) {
@@ -49,8 +45,7 @@ int cas::PartitionTable<PAGE_SZ>::NrPartitions() {
 }
 
 
-template<size_t PAGE_SZ>
-void cas::PartitionTable<PAGE_SZ>::Dump() {
+void cas::PartitionTable::Dump() {
   std::cout << "PartitionTable:\n";
   for (int i = 0x00; i <= 0xFF; ++i) {
     if (Exists(i)) {
@@ -61,8 +56,7 @@ void cas::PartitionTable<PAGE_SZ>::Dump() {
 }
 
 
-template<size_t PAGE_SZ>
-void cas::PartitionTable<PAGE_SZ>::PrintMemoryAllocation() {
+void cas::PartitionTable::PrintMemoryAllocation() {
   std::cout << "PartitionTable:\n";
   for (int i = 0x00; i <= 0xFF; ++i) {
     if (Exists(i)) {
@@ -73,10 +67,3 @@ void cas::PartitionTable<PAGE_SZ>::PrintMemoryAllocation() {
   }
   std::cout << "\n";
 }
-
-
-template class cas::PartitionTable<cas::PAGE_SZ_64KB>;
-template class cas::PartitionTable<cas::PAGE_SZ_32KB>;
-template class cas::PartitionTable<cas::PAGE_SZ_16KB>;
-template class cas::PartitionTable<cas::PAGE_SZ_8KB>;
-template class cas::PartitionTable<cas::PAGE_SZ_4KB>;

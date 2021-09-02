@@ -6,8 +6,8 @@
 #include <sstream>
 
 
-template<class VType, size_t PAGE_SZ>
-benchmark::ExpInsertion<VType, PAGE_SZ>::ExpInsertion(
+template<class VType>
+benchmark::ExpInsertion<VType>::ExpInsertion(
       const cas::Context& context,
       const std::vector<double>& bulkload_fractions)
   : context_(context)
@@ -15,8 +15,8 @@ benchmark::ExpInsertion<VType, PAGE_SZ>::ExpInsertion(
 { }
 
 
-template<class VType, size_t PAGE_SZ>
-void benchmark::ExpInsertion<VType, PAGE_SZ>::Execute() {
+template<class VType>
+void benchmark::ExpInsertion<VType>::Execute() {
   cas::util::Log("Experiment ExpInsertion\n\n");
   for (const auto& bulkload_fraction : bulkload_fractions_) {
     Execute(bulkload_fraction);
@@ -25,19 +25,19 @@ void benchmark::ExpInsertion<VType, PAGE_SZ>::Execute() {
 }
 
 
-template<class VType, size_t PAGE_SZ>
-void benchmark::ExpInsertion<VType, PAGE_SZ>::Execute(double bulkload_fraction)
+template<class VType>
+void benchmark::ExpInsertion<VType>::Execute(double bulkload_fraction)
 {
   // determine size that needs to be bulk-loaded
   auto context_copy = context_;
   size_t file_size = context_copy.dataset_size_ > 0
     ? context_copy.dataset_size_
     : std::filesystem::file_size(context_copy.input_filename_);
-  size_t nr_total_pages = file_size / PAGE_SZ;
+  size_t nr_total_pages = file_size / cas::PAGE_SZ;
   size_t nr_pages_bulkload = nr_total_pages * bulkload_fraction;
-  context_copy.dataset_size_ = nr_pages_bulkload * PAGE_SZ;
+  context_copy.dataset_size_ = nr_pages_bulkload * cas::PAGE_SZ;
 
-  cas::Index<VType, PAGE_SZ> index{context_copy};
+  cas::Index<VType> index{context_copy};
   index.ClearPipelineFiles();
 
   // print configuration
@@ -51,11 +51,11 @@ void benchmark::ExpInsertion<VType, PAGE_SZ>::Execute(double bulkload_fraction)
   }
 
   // prepare cursor to read remaining keys
-  cas::Partition<PAGE_SZ> partition{context_copy.input_filename_, index.Stats(), context_copy};
+  cas::Partition partition{context_copy.input_filename_, index.Stats(), context_copy};
   partition.FptrCursorFirstPageNr(nr_pages_bulkload);
   std::vector<std::byte> page_buffer;
-  page_buffer.resize(PAGE_SZ);
-  cas::MemoryPage<PAGE_SZ> io_page{&page_buffer[0]};
+  page_buffer.resize(cas::PAGE_SZ);
+  cas::MemoryPage io_page{&page_buffer[0]};
   auto cursor = partition.Cursor(io_page);
 
   // insert remaining keys
@@ -94,8 +94,8 @@ void benchmark::ExpInsertion<VType, PAGE_SZ>::Execute(double bulkload_fraction)
 }
 
 
-template<class VType, size_t PAGE_SZ>
-void benchmark::ExpInsertion<VType, PAGE_SZ>::PrintOutput() {
+template<class VType>
+void benchmark::ExpInsertion<VType>::PrintOutput() {
   std::cout << "\n\n\n";
   cas::util::Log("Summary:\n\n");
   std::cout << "bulkload_fraction;runtime_ms;runtime_m;runtime_h;disk_overhead_b;disk_overhead_gb;disk_io_gb\n";
@@ -115,8 +115,4 @@ void benchmark::ExpInsertion<VType, PAGE_SZ>::PrintOutput() {
   }
 }
 
-template class benchmark::ExpInsertion<cas::vint64_t, cas::PAGE_SZ_64KB>;
-template class benchmark::ExpInsertion<cas::vint64_t, cas::PAGE_SZ_32KB>;
-template class benchmark::ExpInsertion<cas::vint64_t, cas::PAGE_SZ_16KB>;
-template class benchmark::ExpInsertion<cas::vint64_t, cas::PAGE_SZ_8KB>;
-template class benchmark::ExpInsertion<cas::vint64_t, cas::PAGE_SZ_4KB>;
+template class benchmark::ExpInsertion<cas::vint64_t>;

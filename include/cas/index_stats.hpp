@@ -8,19 +8,18 @@
 
 namespace cas {
 
-template<size_t PAGE_SZ>
 class IndexStats {
-  Pager<PAGE_SZ>& pager_;
+  Pager& pager_;
 
   struct State {
-    std::shared_ptr<IdxPage<PAGE_SZ>> page_;
+    std::shared_ptr<IdxPage> page_;
     page_nr_t page_nr_;
     uint16_t page_offset_ = 0;
     std::byte parent_byte_ = cas::kNullByte;
     int internal_depth_ = 0;
     int external_depth_ = 0;
 
-    State(std::shared_ptr<IdxPage<PAGE_SZ>> page,
+    State(std::shared_ptr<IdxPage> page,
         cas::page_nr_t page_nr,
         int page_offset,
         std::byte parent_byte,
@@ -41,7 +40,7 @@ public:
   cas::Histogram internal_leaf_depth_histo_;
   cas::Histogram external_leaf_depth_histo_;
 
-  IndexStats(Pager<PAGE_SZ>& pager);
+  IndexStats(Pager& pager);
   void Compute();
   void Dump();
 };

@@ -16,7 +16,6 @@ enum class MemoryPageType : uint8_t {
 };
 
 
-template<size_t PAGE_SZ>
 class MemoryPage {
 private:
   static const size_t OFFSET_NR_KEYS = 0;
@@ -48,8 +47,8 @@ public:
 
   std::byte* Data() { return data_; }
   const std::byte* Data() const { return data_; }
-  size_t Size() const { return PAGE_SZ; }
-  size_t FreeSpace() const { return PAGE_SZ - tail_pos_; }
+  inline size_t Size() const { return PAGE_SZ; }
+  inline size_t FreeSpace() const { return PAGE_SZ - tail_pos_; }
   MemoryPageType Type() const { return type_; }
   void Type(MemoryPageType type) { type_ = type; }
 

@@ -2,7 +2,6 @@
 #include "benchmark/option_parser.hpp"
 #include "cas/search_key.hpp"
 #include "cas/key_encoder.hpp"
-#include "cas/page_buffer.hpp"
 #include "cas/pager.hpp"
 #include "cas/query.hpp"
 #include <fstream>
