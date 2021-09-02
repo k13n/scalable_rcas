@@ -208,8 +208,8 @@ size_t cas::BulkLoader<VType>::Construct(
     mpool_.input_.Release(std::move(io_page));
   }
 
-
-  if ((partition.NrKeys() <= context_.partitioning_threshold_) ||
+  if ((!partition.IsRootPartition() &&
+        partition.NrKeys() <= context_.partitioning_threshold_) ||
       (dsc_p >= key_len_p && dsc_v >= key_len_v)) {
     // stop partitioning further if
     // - the partition contains at most \tau (partitioning threshold) keys
