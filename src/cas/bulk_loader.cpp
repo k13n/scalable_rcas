@@ -586,7 +586,7 @@ size_t cas::BulkLoader<VType>::SerializeNode(Node& node) {
       buffer[offset++] = static_cast<uint8_t>((pv_len >> 0) & 0xFF);
       CopyToSerializationBuffer(offset, &suffix.path_[0], suffix.path_.size());
       CopyToSerializationBuffer(offset, &suffix.value_[0], suffix.value_.size());
-      CopyToSerializationBuffer(offset, &suffix.ref_[0], suffix.ref_.size());
+      CopyToSerializationBuffer(offset, &suffix.ref_, sizeof(cas::ref_t));
     }
   } else {
     // serialize child pointers
@@ -641,7 +641,7 @@ size_t cas::BulkLoader<VType>::Node::ByteSize(int nr_children) const {
       // lenghts of substrings
       size += suffix.path_.size();
       size += suffix.value_.size();
-      size += suffix.ref_.size();
+      size += sizeof(cas::ref_t);
     }
   } else {
     // per child => b:1, ptr: 6

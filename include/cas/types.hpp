@@ -1,7 +1,6 @@
 #pragma once
 
-#include "cas/swh_pid.hpp"
-#include <array>
+#include "cas/ref.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -20,10 +19,6 @@ const size_t PAGE_SZ        = PAGE_SZ_16KB;
 // info about index pages
 using page_nr_t = size_t;
 const page_nr_t ROOT_IDX_PAGE_NR = 0;
-
-// reference type
-using ref_t = std::array<std::byte, 20>;
-std::string ToString(const ref_t& ref);
 
 // value types
 using vint32_t = int32_t;

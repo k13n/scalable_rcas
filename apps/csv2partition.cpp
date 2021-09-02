@@ -30,7 +30,13 @@ cas::Key<cas::vint64_t> ParseInputLine(
 
   key.path_  = std::move(path);
   key.value_ = std::stoll(value);
+
+#ifdef REF_T_UINT64
+  key.ref_   = std::stoull(ref);
+#endif
+#ifdef REF_T_SWHPID
   key.ref_   = cas::ParseSwhPid(ref);
+#endif
 
   return key;
 }

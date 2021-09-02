@@ -32,3 +32,8 @@ std::string cas::ToString(DscComputation v) {
   }
   return "";
 }
+
+
+std::string cas::ToString(const uint64_t& ref) {
+  return std::to_string(ref);
+}

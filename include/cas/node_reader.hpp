@@ -99,7 +99,7 @@ public:
       const uint8_t* value = &buffer_[offset];
       offset += len_v;
       cas::ref_t ref;
-      std::memcpy(&ref[0], &buffer_[offset], sizeof(cas::ref_t));
+      std::memcpy(&ref, &buffer_[offset], sizeof(cas::ref_t));
       offset += sizeof(cas::ref_t);
       callback(len_p, path, len_v, value, ref);
     }

@@ -48,7 +48,7 @@ public:
   }
 
   inline void Ref(const ref_t& ref) {
-    std::memcpy(data_ + POS_REF, ref.data(), ref.size());
+    std::memcpy(data_ + POS_REF, &ref, sizeof(cas::ref_t));
   }
   inline const ref_t& Ref() const {
     return *reinterpret_cast<ref_t*>(data_ + POS_REF);
