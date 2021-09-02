@@ -7,9 +7,9 @@
 namespace cas {
 
 // reference type
-using ref_t = std::array<std::byte, 20>;
+using SwhPid = std::array<std::byte, 20>;
 
-std::string ToString(const ref_t& ref);
-ref_t ParseSwhPid(const std::string& input);
+std::string ToString(const SwhPid& ref);
+SwhPid ParseSwhPid(const std::string& input);
 
 } // namespace cas
