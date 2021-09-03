@@ -1,0 +1,6 @@
+/usr/include/**;5000;281474976710656
+/usr/include/**;3000;4000
+/usr/lib/**;0;1000
+/usr/share/**/Makefile;1000;2000
+/usr/share/doc/**/README;4000;5000
+/etc/**;5000;281474976710656
