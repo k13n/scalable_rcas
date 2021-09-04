@@ -6,6 +6,7 @@
 #include <sstream>
 #include <regex>
 #include <iomanip>
+#include <fstream>
 
 void cas::util::DumpHexValues(const std::vector<std::byte>& buffer) {
   DumpHexValues(buffer, 0, buffer.size());
@@ -230,4 +231,37 @@ std::string cas::util::Exec(const char* cmd) {
 
 void cas::util::ClearPageCache() {
   auto s = cas::util::Exec("echo 3 | sudo tee /proc/sys/vm/drop_caches");
+}
+
+
+
+cas::SearchKey<cas::vint64_t> cas::util::ParseQuery(
+      const std::string& line,
+      char delimiter) {
+  std::string spath;
+  std::string slow;
+  std::string shigh;
+
+  std::stringstream line_stream(line);
+  std::getline(line_stream, spath,  delimiter);
+  std::getline(line_stream, slow, delimiter);
+  std::getline(line_stream, shigh, delimiter);
+
+  cas::vint64_t low  = std::stoll(slow);
+  cas::vint64_t high = std::stoll(shigh);
+  return cas::SearchKey<cas::vint64_t>{std::move(spath), low, high};
+}
+
+
+
+std::vector<cas::SearchKey<cas::vint64_t>> cas::util::ParseQueryFile(
+      const std::string& filename,
+      char delimiter) {
+  std::vector<cas::SearchKey<cas::vint64_t>> queries;
+  std::ifstream infile(filename);
+  std::string line;
+  while (std::getline(infile, line)) {
+    queries.push_back(cas::util::ParseQuery(line, ';'));
+  }
+  return queries;
 }

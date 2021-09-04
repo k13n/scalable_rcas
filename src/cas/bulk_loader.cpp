@@ -88,6 +88,8 @@ void cas::BulkLoader<VType>::Load() {
   cas::util::AddToTimer(stats_.runtime_, start_time_global);
   stats_.index_bytes_written_ += std::filesystem::file_size(context_.index_file_);
   ++stats_.nr_bulkloads_;
+
+  pager_.Close();
 }
 
 
@@ -134,6 +136,8 @@ void cas::BulkLoader<VType>::Load(cas::Partition& partition) {
   cas::util::AddToTimer(stats_.runtime_, start_time_global);
   stats_.index_bytes_written_ += std::filesystem::file_size(context_.index_file_);
   ++stats_.nr_bulkloads_;
+
+  pager_.Close();
 }
 
 

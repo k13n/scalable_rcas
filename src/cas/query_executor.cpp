@@ -25,6 +25,10 @@ cas::QueryStats cas::QueryExecutor::Execute(
   size_t file_size = std::filesystem::file_size(idx_filename_);
 
   auto* file = static_cast<uint8_t*>(mmap(NULL, file_size, PROT_READ, MAP_PRIVATE, fd, 0));
+  if (file == MAP_FAILED) {
+    std::string error_msg = "mmap of file '" + idx_filename_ + "' failed";
+    throw std::runtime_error{error_msg};
+  }
   cas::NodeReader root{file, 0};
 
   cas::Query query{&root, key, emitter};

@@ -1,5 +1,6 @@
 #include "benchmark/exp_partitioning_threshold.hpp"
 #include "benchmark/option_parser.hpp"
+#include "cas/util.hpp"
 
 int main_(int argc, char** argv) {
   using VType = cas::vint64_t;
@@ -9,18 +10,27 @@ int main_(int argc, char** argv) {
   benchmark::option_parser::Parse(argc, argv, context);
 
   std::vector<size_t> partitioning_thresholds = {
-    1,
-    200,
+    10000,
     1000,
+    100,
+    10,
+    1,
   };
   std::vector<size_t> dataset_sizes = {
-     25'000'000'000,
-     50'000'000'000,
-     75'000'000'000,
-    100'000'000'000,
+     /* 500'000'000, */
+     /* 1'000'000'000, */
+     10'000'000'000,
+     /* 25'000'000'000, */
+     /* 50'000'000'000, */
+     /* 75'000'000'000, */
+    /* 100'000'000'000, */
   };
 
-  Exp bm{context, partitioning_thresholds, dataset_sizes};
+  // parse queries
+  std::string query_file = "";
+  auto queries = cas::util::ParseQueryFile(query_file, ',');
+
+  Exp bm{context, partitioning_thresholds, dataset_sizes, queries};
   bm.Execute();
 
   return 0;

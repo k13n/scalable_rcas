@@ -4,29 +4,12 @@
 #include "cas/key_encoder.hpp"
 #include "cas/pager.hpp"
 #include "cas/query.hpp"
+#include "cas/util.hpp"
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <filesystem>
 #include <getopt.h>
-
-cas::SearchKey<cas::vint64_t> ParseQuery(
-      const std::string& line,
-      char delimiter) {
-  std::string spath;
-  std::string slow;
-  std::string shigh;
-
-  std::stringstream line_stream(line);
-  std::getline(line_stream, spath,  delimiter);
-  std::getline(line_stream, slow, delimiter);
-  std::getline(line_stream, shigh, delimiter);
-
-  cas::vint64_t low  = std::stoll(slow);
-  cas::vint64_t high = std::stoll(shigh);
-  return cas::SearchKey<cas::vint64_t>{std::move(spath), low, high};
-}
-
 
 void ExecuteExperiment(
       const std::string& pipeline_dir,
@@ -43,12 +26,7 @@ void ExecuteExperiment(
   std::cout << "clear_page_cache: " << clear_page_cache << "\n";
 
   // parse queries
-  std::vector<cas::SearchKey<VType>> queries;
-  std::ifstream infile(query_file);
-  std::string line;
-  while (std::getline(infile, line)) {
-    queries.push_back(ParseQuery(line, ';'));
-  }
+  auto queries = cas::util::ParseQueryFile(query_file, ',');
 
   // execute experiment
   Exp bm{pipeline_dir, queries, clear_page_cache, nr_repetitions};

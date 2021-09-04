@@ -27,6 +27,7 @@ public:
   Pager& operator=(Pager&& other) = delete;
 
   void Clear();
+  void Close() { CloseFile(); };
 
   inline std::shared_ptr<IdxPage> NewIdxPage() const {
     return std::make_shared<IdxPage>();

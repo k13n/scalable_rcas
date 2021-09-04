@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cas/bulk_loader_stats.hpp"
+#include "cas/search_key.hpp"
 #include <array>
 #include <chrono>
 #include <cstddef>
@@ -73,6 +74,16 @@ inline void AddToTimer(
   ++timer.count_;
   timer.time_ += std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 }
+
+
+
+cas::SearchKey<cas::vint64_t> ParseQuery(
+      const std::string& line,
+      char delimiter);
+
+std::vector<cas::SearchKey<cas::vint64_t>> ParseQueryFile(
+      const std::string& filename,
+      char delimiter);
 
 
 std::string CurrentIsoTime();
