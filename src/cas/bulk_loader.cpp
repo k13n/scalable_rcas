@@ -169,6 +169,10 @@ size_t cas::BulkLoader<VType>::Construct(
     cas::util::AddToTimer(stats_.runtime_dsc_computation_, start_time_dsc);
   }
 
+  if (context_.compute_depth_) {
+    stats_.node_depth_.Record(depth);
+  }
+
   Node node;
   size_t dsc_p = partition.DscP();
   size_t dsc_v = partition.DscV();
@@ -223,11 +227,23 @@ size_t cas::BulkLoader<VType>::Construct(
     node.dimension_ = cas::Dimension::LEAF;
     ConstructLeafNode(node, partition);
     next_pos += node.ByteSize(0);
+    ++stats_.nr_leaf_nodes_;
   } else {
     if (dimension == cas::Dimension::PATH && dsc_p >= key_len_p) {
       dimension = cas::Dimension::VALUE;
     } else if (dimension == cas::Dimension::VALUE && dsc_v >= key_len_v) {
       dimension = cas::Dimension::PATH;
+    }
+
+    switch (dimension) {
+      case cas::Dimension::PATH:
+        ++stats_.nr_path_nodes_;
+        break;
+      case cas::Dimension::VALUE:
+        ++stats_.nr_value_nodes_;
+        break;
+      default:
+        break;
     }
 
     node.dimension_ = dimension;

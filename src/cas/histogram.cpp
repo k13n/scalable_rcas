@@ -40,15 +40,16 @@ void cas::Histogram::Dump() const {
     sum += count;
   }
   size_t cumulative_count = 0;
+  std::cout << "value;count;percent;cumulative_count;cumulative_percent\n";
   for (const auto& [value, count] : data_) {
     cumulative_count += count;
     double percent = count / static_cast<double>(sum) * 100;
     double cumulative_percent = cumulative_count / static_cast<double>(sum) * 100;
     std::cout <<
-      value << " " <<
-      count << " " <<
-      percent << " " <<
-      cumulative_count << " " <<
+      value << ";" <<
+      count << ";" <<
+      percent << ";" <<
+      cumulative_count << ";" <<
       cumulative_percent << "\n";
   }
 }

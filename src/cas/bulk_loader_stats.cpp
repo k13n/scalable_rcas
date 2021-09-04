@@ -12,6 +12,9 @@ void cas::BulkLoaderStats::Dump() const {
   std::cout << "\nfiles_created_: " << files_created_;
   std::cout << "\nmem_pages_read_: " << mem_pages_read_;
   std::cout << "\nmem_pages_written_: " << mem_pages_written_;
+  std::cout << "\nnr_path_nodes_: " << nr_path_nodes_;
+  std::cout << "\nnr_value_nodes_: " << nr_value_nodes_;
+  std::cout << "\nnr_leaf_nodes_: " << nr_leaf_nodes_;
   PrintByteSize("partition_bytes_read_", partition_bytes_read_);
   PrintByteSize("partition_bytes_written_", partition_bytes_written_);
   PrintByteSize("index_bytes_written_", index_bytes_written_);

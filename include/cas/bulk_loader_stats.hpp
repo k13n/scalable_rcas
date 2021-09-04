@@ -27,6 +27,9 @@ struct BulkLoaderStats {
   size_t index_bytes_read_{0};
   size_t mem_pages_read_{0};
   size_t mem_pages_written_{0};
+  size_t nr_path_nodes_{0};
+  size_t nr_value_nodes_{0};
+  size_t nr_leaf_nodes_{0};
   Timer runtime_;
   Timer runtime_root_partition_;
   Timer runtime_construction_;
@@ -40,8 +43,8 @@ struct BulkLoaderStats {
   Timer runtime_dsc_computation_;
   Timer runtime_insertion_;
   Timer runtime_collect_keys_;
+  Histogram node_depth_;
   Histogram node_fanout_;
-  Histogram page_fanout_ptrs_;
 
   size_t IoOverhead() const;
   size_t DiskIo() const;

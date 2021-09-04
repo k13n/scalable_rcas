@@ -68,7 +68,7 @@ void benchmark::ExpPartitioningThreshold<VType>::Execute(
 
   // run query experiment
   bool clear_page_cache = true;
-  int nr_repetitions = 1;
+  int nr_repetitions = 10;
   benchmark::ExpQuerying<VType> query_experiment{
     pipeline_dir,
     queries_,

@@ -20,6 +20,7 @@ struct Context {
   bool use_direct_io_ = false;
   DscComputation dsc_computation_ = cas::DscComputation::Proactive;
   MemoryPlacement memory_placement_ = cas::MemoryPlacement::AllOrNothing;
+  bool compute_depth_ = false;
   bool compute_fanout_ = false;
   bool print_root_partition_table_allocation_ = false;
   bool use_root_dsc_bytes_ = false;
@@ -42,6 +43,7 @@ struct Context {
     std::cout << "\nuse_direct_io_: " << use_direct_io_;
     std::cout << "\ndsc_computation_: " << ToString(dsc_computation_);
     std::cout << "\nmemory_placement_: " << ToString(memory_placement_);
+    std::cout << "\ncompute_depth_: " << compute_depth_;
     std::cout << "\ncompute_fanout_: " << compute_fanout_;
     std::cout << "\nprint_root_partition_table_allocation_: "
               << print_root_partition_table_allocation_;

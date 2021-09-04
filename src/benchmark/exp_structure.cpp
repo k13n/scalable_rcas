@@ -1,6 +1,5 @@
 #include "benchmark/exp_structure.hpp"
 #include "cas/bulk_loader.hpp"
-#include "cas/index_stats.hpp"
 #include "cas/util.hpp"
 
 template<class VType>
@@ -16,6 +15,7 @@ void benchmark::ExpStructure<VType>::Execute() {
   cas::util::Log("Experiment ExpStructure\n\n");
 
   // configuration
+  context_.compute_depth_ = true;
   context_.compute_fanout_ = true;
 
   // print input
@@ -34,17 +34,11 @@ void benchmark::ExpStructure<VType>::Execute() {
   stats.Dump();
   std::cout << "\n";
 
-  // collect some stats
-  cas::Pager pager{context_.index_file_};
-  cas::IndexStats index_stats{pager};
-  index_stats.Compute();
+  std::cout << "Node Depth Histogram:\n";
+  stats.node_depth_.Dump();
 
-  PrintOutput(stats.node_fanout_, 32, 256, "Node Fanout");
-  PrintOutput(stats.page_fanout_ptrs_, 32, "Page Fanout Pointers");
-  PrintOutput(index_stats.internal_depth_histo_, 32, "Internal Depth");
-  PrintOutput(index_stats.external_depth_histo_, 32, "External Depth");
-  PrintOutput(index_stats.internal_leaf_depth_histo_, 32, "Internal Leaf Depth");
-  PrintOutput(index_stats.external_leaf_depth_histo_, 32, "External Leaf Depth");
+  std::cout << "\nNode Fanout Histogram:\n";
+  stats.node_fanout_.Dump();
 
   std::cout << "\n\n\n"; cas::util::Log("done");
 }

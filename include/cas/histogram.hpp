@@ -8,8 +8,8 @@ class Histogram {
   std::map<size_t, size_t> data_;
 
 public:
-  inline void Record(size_t utilization) {
-    ++data_[utilization];
+  inline void Record(size_t value) {
+    ++data_[value];
   }
 
   void Print(int nr_bins) const;

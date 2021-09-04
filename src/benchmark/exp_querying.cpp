@@ -31,25 +31,29 @@ void benchmark::ExpQuerying<VType>::Execute() {
   std::cout << "pipeline_dir: " << pipeline_dir_ << "\n";
   std::cout << "clear_page_cache: " << clear_page_cache_ << "\n\n";
 
-  results_.reserve(nr_repetitions_ * encoded_queries_.size());
-  for (int i = 0; i < nr_repetitions_; ++i) {
-    cas::util::Log("Repetition " + std::to_string(i));
-    cas::Context context;
-    context.pipeline_dir_ = pipeline_dir_;
-    cas::Index<VType> index{context};
-    for (const auto& search_key : encoded_queries_) {
+  cas::Context context;
+  context.pipeline_dir_ = pipeline_dir_;
+  cas::Index<VType> index{context};
+
+  const cas::BinaryKeyEmitter emitter = [](
+      const cas::QueryBuffer& /* path */, size_t /* p_len */,
+      const cas::QueryBuffer& /* value */, size_t /* v_len */,
+      cas::ref_t ref) -> void {
+    cas::ToString(ref);
+  };
+
+  results_.reserve(encoded_queries_.size());
+  for (const auto& search_key : encoded_queries_) {
+    std::vector<cas::QueryStats> repetitions;
+    repetitions.reserve(nr_repetitions_);
+    for (int i = 0; i < nr_repetitions_; ++i) {
       if (clear_page_cache_) {
         cas::util::ClearPageCache();
       }
-      const cas::BinaryKeyEmitter emitter = [](
-          const cas::QueryBuffer& /* path */, size_t /* p_len */,
-          const cas::QueryBuffer& /* value */, size_t /* v_len */,
-          cas::ref_t ref) -> void {
-        cas::ToString(ref);
-      };
       auto stats = index.Query(search_key, emitter);
-      results_.push_back(stats);
+      repetitions.push_back(stats);
     }
+    results_.push_back(cas::QueryStats::Avg(repetitions));
   }
 
   PrintOutput();
