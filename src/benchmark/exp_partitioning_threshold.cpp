@@ -38,10 +38,16 @@ void benchmark::ExpPartitioningThreshold<VType>::Execute(
     size_t threshold,
     size_t dataset_size)
 {
+  std::string pipeline_dir = context_.pipeline_dir_
+    + "/threshold" + std::to_string(threshold);
+  std::filesystem::create_directories(pipeline_dir);
+
   // copy the context;
   auto context = context_;
   context.partitioning_threshold_ = threshold;
   context.dataset_size_ = dataset_size;
+  context.pipeline_dir_ = pipeline_dir;
+  context.index_file_ = pipeline_dir + "/index.bin";
 
   // print input
   cas::util::Log("Configuration\n");
@@ -51,18 +57,16 @@ void benchmark::ExpPartitioningThreshold<VType>::Execute(
   // contains statistics
   Stats stats;
 
-  // run benchmark
+  // bulk-load index
   cas::BulkLoader<VType> bulk_loader{context, stats.bulk_stats_};
   bulk_loader.Load();
 
-  // print output
+  // print bulk-loading stats
   cas::util::Log("Output:\n\n");
   stats.bulk_stats_.Dump();
   std::cout << "\n\n";
 
-  std::filesystem::path index_file{context.index_file_};
-  index_file.remove_filename();
-  std::string pipeline_dir{index_file.string()};
+  // run query experiment
   bool clear_page_cache = true;
   int nr_repetitions = 1;
   benchmark::ExpQuerying<VType> query_experiment{
