@@ -30,6 +30,11 @@ public:
 
   void Execute();
 
+  std::vector<cas::QueryStats> Results() {
+    return results_;
+  }
+
+
 private:
   void PrintOutput();
 };

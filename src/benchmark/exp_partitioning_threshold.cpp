@@ -1,8 +1,10 @@
 #include "benchmark/exp_partitioning_threshold.hpp"
+#include "benchmark/exp_querying.hpp"
 #include "cas/bulk_loader.hpp"
 #include "cas/query_executor.hpp"
 #include "cas/key_encoder.hpp"
 #include "cas/util.hpp"
+#include <filesystem>
 
 
 template<class VType>
@@ -58,20 +60,19 @@ void benchmark::ExpPartitioningThreshold<VType>::Execute(
   stats.bulk_stats_.Dump();
   std::cout << "\n\n";
 
-  std::vector<cas::QueryStats> query_stats;
-  cas::QueryExecutor executor{context.index_file_};
-  for (const auto& query : queries_) {
-    bool reversed = false;
-    auto search_key = cas::KeyEncoder<VType>::Encode(query, reversed);
-    cas::util::ClearPageCache();
-    auto qstat = executor.Execute(search_key, cas::kNullEmitter);
-    qstat.Dump();
-    query_stats.push_back(qstat);
-  }
-  stats.query_stats_ = cas::QueryStats::Sum(query_stats);
-  cas::util::Log("Sum of queries:\n");
-  stats.query_stats_.Dump();
-  std::cout << "\n\n\n\n" << std::flush;
+  std::filesystem::path index_file{context.index_file_};
+  index_file.remove_filename();
+  std::string pipeline_dir{index_file.string()};
+  bool clear_page_cache = true;
+  int nr_repetitions = 1;
+  benchmark::ExpQuerying<VType> query_experiment{
+    pipeline_dir,
+    queries_,
+    clear_page_cache,
+    nr_repetitions
+  };
+  query_experiment.Execute();
+  stats.query_stats_ = cas::QueryStats::Sum(query_experiment.Results());
 
   // save input and output
   results_.emplace_back(context, stats);
