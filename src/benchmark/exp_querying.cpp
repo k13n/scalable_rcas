@@ -12,10 +12,12 @@ benchmark::ExpQuerying<VType>::ExpQuerying(
       const std::string& pipeline_dir,
       const std::vector<cas::SearchKey<VType>>& queries,
       bool clear_page_cache,
+      bool do_warmup,
       int nr_repetitions)
   : pipeline_dir_(pipeline_dir)
   , queries_(queries)
   , clear_page_cache_(clear_page_cache)
+  , do_warmup_(do_warmup)
   , nr_repetitions_(nr_repetitions)
 {
   bool reverse_paths = false;
@@ -30,6 +32,10 @@ void benchmark::ExpQuerying<VType>::Execute() {
   cas::util::Log("Experiment ExpQuerying\n");
   std::cout << "pipeline_dir: " << pipeline_dir_ << "\n";
   std::cout << "clear_page_cache: " << clear_page_cache_ << "\n\n";
+
+  if (do_warmup_) {
+    DoWarmUp();
+  }
 
   cas::Context context;
   context.pipeline_dir_ = pipeline_dir_;
@@ -57,6 +63,19 @@ void benchmark::ExpQuerying<VType>::Execute() {
   }
 
   PrintOutput();
+}
+
+
+template<class VType>
+void benchmark::ExpQuerying<VType>::DoWarmUp() {
+  cas::util::Log("Warming up caches");
+  cas::Context context;
+  context.pipeline_dir_ = pipeline_dir_;
+  cas::Index<VType> index{context};
+  for (const auto& search_key : encoded_queries_) {
+    index.Query(search_key, cas::kNullEmitter);
+  }
+  cas::util::Log("Warming completed");
 }
 
 

@@ -68,11 +68,13 @@ void benchmark::ExpPartitioningThreshold<VType>::Execute(
 
   // run query experiment
   bool clear_page_cache = true;
+  bool do_warmup = false;
   int nr_repetitions = 10;
   benchmark::ExpQuerying<VType> query_experiment{
     pipeline_dir,
     queries_,
     clear_page_cache,
+    do_warmup,
     nr_repetitions
   };
   query_experiment.Execute();
