@@ -75,10 +75,10 @@ void cas::Partition::CloseFile() {
   if (fptr_ == -1) {
     return;
   }
-  // flushing data to disk
-  auto start = std::chrono::high_resolution_clock::now();
-  fsync(fptr_);
-  cas::util::AddToTimer(stats_.runtime_partition_disk_write_, start);
+  /* // flushing data to disk */
+  /* auto start = std::chrono::high_resolution_clock::now(); */
+  /* fsync(fptr_); */
+  /* cas::util::AddToTimer(stats_.runtime_partition_disk_write_, start); */
   // closing file
   if (close(fptr_) == -1) {
     throw std::runtime_error{"error while closing file '" + filename_ + "'"};
