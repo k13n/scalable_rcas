@@ -1,4 +1,4 @@
-#include "benchmark/exp_insertion.hpp"
+#include "benchmark/exp_memory_keys.hpp"
 #include "cas/bulk_loader.hpp"
 #include "cas/index.hpp"
 #include "cas/util.hpp"
@@ -7,61 +7,56 @@
 
 
 template<class VType>
-benchmark::ExpInsertion<VType>::ExpInsertion(
+benchmark::ExpMemoryKeys<VType>::ExpMemoryKeys(
       const cas::Context& context,
-      const std::vector<double>& bulkload_fractions)
+      const std::vector<size_t>& nr_memory_keys)
   : context_(context)
-  , bulkload_fractions_(bulkload_fractions)
+  , nr_memory_keys_(nr_memory_keys)
 { }
 
 
 template<class VType>
-void benchmark::ExpInsertion<VType>::Execute() {
-  cas::util::Log("Experiment ExpInsertion\n\n");
-  for (const auto& bulkload_fraction : bulkload_fractions_) {
-    Execute(bulkload_fraction);
+void benchmark::ExpMemoryKeys<VType>::Execute() {
+  cas::util::Log("Experiment ExpMemoryKeys\n\n");
+  for (auto nr_keys : nr_memory_keys_) {
+    Execute(nr_keys);
   }
   PrintOutput();
 }
 
 
 template<class VType>
-void benchmark::ExpInsertion<VType>::Execute(double bulkload_fraction)
+void benchmark::ExpMemoryKeys<VType>::Execute(size_t nr_memory_keys)
 {
-  // determine size that needs to be bulk-loaded
   auto context_copy = context_;
-  size_t file_size = context_copy.dataset_size_ > 0
-    ? context_copy.dataset_size_
-    : std::filesystem::file_size(context_copy.input_filename_);
-  size_t nr_total_pages = file_size / cas::PAGE_SZ;
-  size_t nr_pages_bulkload = nr_total_pages * bulkload_fraction;
-  context_copy.dataset_size_ = nr_pages_bulkload * cas::PAGE_SZ;
+  context_copy.max_memory_keys_ = nr_memory_keys;
+  /* int avg_key_size = 80; */
+  /* context_copy.mem_size_bytes_ = nr_memory_keys * avg_key_size; */
+
+  // print configuration
+  std::cout << "nr_memory_keys: " << nr_memory_keys << "\n";
+  context_copy.Dump();
+  std::cout << "\n" << std::flush;
 
   cas::Index<VType> index{context_copy};
   index.ClearPipelineFiles();
 
-  // print configuration
-  std::cout << "bulkload_fraction: " << bulkload_fraction << "\n";
-  context_copy.Dump();
-  std::cout << "\n" << std::flush;
-
-  // bulk-load first chunk
-  if (context_copy.dataset_size_ > 0) {
-    index.BulkLoad();
-  }
-
   // prepare cursor to read remaining keys
   cas::Partition partition{context_copy.input_filename_, index.Stats(), context_copy};
-  partition.FptrCursorFirstPageNr(nr_pages_bulkload);
   std::vector<std::byte> page_buffer;
   page_buffer.resize(cas::PAGE_SZ);
   cas::MemoryPage io_page{&page_buffer[0]};
   auto cursor = partition.Cursor(io_page);
 
+  size_t file_size = context_copy.dataset_size_ > 0
+    ? context_copy.dataset_size_
+    : std::filesystem::file_size(context_copy.input_filename_);
+  size_t nr_total_pages = file_size / cas::PAGE_SZ;
+
   // insert remaining keys
   auto start = std::chrono::high_resolution_clock::now();
   size_t nr_inserted_keys = 0;
-  auto print_progress = [&start,&nr_inserted_keys,&index]() -> void {
+  auto print_progress = [&start,&nr_inserted_keys]() -> void {
     auto now = std::chrono::high_resolution_clock::now();
     auto time = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
     std::stringstream ss;
@@ -69,10 +64,9 @@ void benchmark::ExpInsertion<VType>::Execute(double bulkload_fraction)
       << nr_inserted_keys << ", "
       << time << ")\n";
     cas::util::Log(ss.str());
-    index.Stats().Dump();
     std::cout << std::flush;
   };
-  size_t i = nr_pages_bulkload;
+  size_t i = 0;
   while (cursor.HasNext() && i < nr_total_pages) {
     for (auto key : io_page) {
       index.Insert(key);
@@ -89,24 +83,29 @@ void benchmark::ExpInsertion<VType>::Execute(double bulkload_fraction)
   // print results
   std::cout << "\nResults:\n";
   index.Stats().Dump();
-  std::cout << "\n\n" << std::flush;
+  std::cout << "\n\n\n" << std::flush;
 
-  results_.emplace_back(bulkload_fraction, index.Stats());
+  auto stats = index.Stats();
+  auto now = std::chrono::high_resolution_clock::now();
+  stats.runtime_.time_ = std::chrono::duration_cast<std::chrono::milliseconds>(now - start);
+  stats.runtime_.count_ = 0;
+
+  results_.emplace_back(nr_memory_keys, stats);
 }
 
 
 template<class VType>
-void benchmark::ExpInsertion<VType>::PrintOutput() {
+void benchmark::ExpMemoryKeys<VType>::PrintOutput() {
   std::cout << "\n\n\n";
   cas::util::Log("Summary:\n\n");
-  std::cout << "bulkload_fraction;runtime_ms;runtime_m;runtime_h;disk_overhead_b;disk_overhead_gb;disk_io_gb\n";
-  for (const auto& [bulkload_fraction, stats] : results_) {
+  std::cout << "nr_memory_keys;runtime_ms;runtime_m;runtime_h;disk_overhead_b;disk_overhead_gb;disk_io_gb\n";
+  for (const auto& [nr_memory_keys, stats] : results_) {
     auto runtime_ms = std::chrono::duration_cast<std::chrono::milliseconds>(stats.runtime_.time_).count();
     auto runtime_m  = std::chrono::duration_cast<std::chrono::minutes>(stats.runtime_.time_).count();
     auto runtime_h  = std::chrono::duration_cast<std::chrono::hours>(stats.runtime_.time_).count();
     auto disk_overhead_b  = stats.IoOverhead();
     auto disk_overhead_gb = disk_overhead_b / 1'000'000'000.0;
-    std::cout << bulkload_fraction << ";";
+    std::cout << nr_memory_keys << ";";
     std::cout << runtime_ms << ";";
     std::cout << runtime_m << ";";
     std::cout << runtime_h << ";";
@@ -116,4 +115,4 @@ void benchmark::ExpInsertion<VType>::PrintOutput() {
   }
 }
 
-template class benchmark::ExpInsertion<cas::vint64_t>;
+template class benchmark::ExpMemoryKeys<cas::vint64_t>;

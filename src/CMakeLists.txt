@@ -35,6 +35,7 @@ add_library(cas
   ${CMAKE_CURRENT_SOURCE_DIR}/benchmark/exp_dataset_size.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/benchmark/exp_dsc_computation.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/benchmark/exp_insertion.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/benchmark/exp_memory_keys.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/benchmark/exp_memory_management.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/benchmark/exp_partitioning_threshold.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/benchmark/exp_querying.cpp

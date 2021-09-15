@@ -44,17 +44,19 @@ void Parse(int argc, char** argv, cas::Context& context) {
   const int OPT_INDEX_FILE = 3;
   const int OPT_PIPELINE_DIR = 4;
   const int OPT_MEM_SIZE = 5;
-  const int OPT_INPUT_SIZE = 6;
-  const int OPT_PARTITIONING_THRESHOLD = 7;
-  const int OPT_DIRECT_IO = 8;
-  const int OPT_PARTITIONING_DSC = 9;
-  const int OPT_MEMORY_PLACEMENT = 10;
+  const int OPT_MAX_MEMORY_KEYS = 6;
+  const int OPT_INPUT_SIZE = 7;
+  const int OPT_PARTITIONING_THRESHOLD = 8;
+  const int OPT_DIRECT_IO = 9;
+  const int OPT_PARTITIONING_DSC = 10;
+  const int OPT_MEMORY_PLACEMENT = 11;
   static struct option long_options[] = {
     {"input_filename",         required_argument, nullptr, OPT_INPUT_FILENAME},
     {"partition_folder",       required_argument, nullptr, OPT_PARTITION_FOLDER},
     {"index_file",             required_argument, nullptr, OPT_INDEX_FILE},
     {"pipeline_dir",           required_argument, nullptr, OPT_PIPELINE_DIR},
     {"mem_size",               required_argument, nullptr, OPT_MEM_SIZE},
+    {"max_memory_keys",        required_argument, nullptr, OPT_MAX_MEMORY_KEYS},
     {"input_size",             required_argument, nullptr, OPT_INPUT_SIZE},
     {"partitioning_threshold", required_argument, nullptr, OPT_PARTITIONING_THRESHOLD},
     {"direct_io",              required_argument, nullptr, OPT_DIRECT_IO},
@@ -85,6 +87,9 @@ void Parse(int argc, char** argv, cas::Context& context) {
         break;
       case OPT_MEM_SIZE:
         ParseSizeT(optarg, context.mem_size_bytes_, long_options[option_index].name);
+        break;
+      case OPT_MAX_MEMORY_KEYS:
+        ParseSizeT(optarg, context.max_memory_keys_, long_options[option_index].name);
         break;
       case OPT_INPUT_SIZE:
         ParseSizeT(optarg, context.dataset_size_, long_options[option_index].name);
