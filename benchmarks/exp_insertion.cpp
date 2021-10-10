@@ -9,8 +9,8 @@ int main_(int argc, char** argv) {
   benchmark::option_parser::Parse(argc, argv, context);
 
   std::vector<double> bulkload_fractions = {
-    1.0,
-    0.5,
+    /* 1.0, */
+    /* 0.5, */
     0.0,
   };
 
