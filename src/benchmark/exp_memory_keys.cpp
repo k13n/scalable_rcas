@@ -30,8 +30,8 @@ void benchmark::ExpMemoryKeys<VType>::Execute(size_t nr_memory_keys)
 {
   auto context_copy = context_;
   context_copy.max_memory_keys_ = nr_memory_keys;
-  /* int avg_key_size = 80; */
-  /* context_copy.mem_size_bytes_ = nr_memory_keys * avg_key_size; */
+  int avg_key_size = 80;
+  context_copy.mem_size_bytes_ = nr_memory_keys * avg_key_size;
 
   // print configuration
   std::cout << "nr_memory_keys: " << nr_memory_keys << "\n";
