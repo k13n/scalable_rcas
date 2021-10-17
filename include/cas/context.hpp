@@ -22,6 +22,8 @@ struct Context {
   MemoryPlacement memory_placement_ = cas::MemoryPlacement::AllOrNothing;
   bool compute_depth_ = false;
   bool compute_fanout_ = false;
+  bool compute_inner_node_width_ = false;
+  bool compute_leaf_width_ = false;
   bool print_root_partition_table_allocation_ = false;
   bool use_root_dsc_bytes_ = false;
   int root_dsc_P_ = 0;
@@ -45,6 +47,8 @@ struct Context {
     std::cout << "\nmemory_placement_: " << ToString(memory_placement_);
     std::cout << "\ncompute_depth_: " << compute_depth_;
     std::cout << "\ncompute_fanout_: " << compute_fanout_;
+    std::cout << "\ncompute_inner_node_width_: " << compute_inner_node_width_;
+    std::cout << "\ncompute_leaf_width_: " << compute_leaf_width_;
     std::cout << "\nprint_root_partition_table_allocation_: "
               << print_root_partition_table_allocation_;
     std::cout << "\nuse_root_dsc_bytes_: " << use_root_dsc_bytes_;

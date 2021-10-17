@@ -52,6 +52,7 @@ void cas::Histogram::Dump() const {
       cumulative_count << ";" <<
       cumulative_percent << "\n";
   }
+  std::cout << "\nAverage: " << Average() << "\n\n";
 }
 
 

@@ -17,6 +17,8 @@ void benchmark::ExpStructure<VType>::Execute() {
   // configuration
   context_.compute_depth_ = true;
   context_.compute_fanout_ = true;
+  context_.compute_inner_node_width_ = true;
+  context_.compute_leaf_width_ = true;
 
   // print input
   cas::util::Log("Configuration\n");
@@ -39,6 +41,12 @@ void benchmark::ExpStructure<VType>::Execute() {
 
   std::cout << "\nNode Fanout Histogram:\n";
   stats.node_fanout_.Dump();
+
+  std::cout << "\nInner Node Width Histogram:\n";
+  stats.inner_node_width_.Dump();
+
+  std::cout << "\nLeaf Node Width Histogram:\n";
+  stats.leaf_width_.Dump();
 
   std::cout << "\n\n\n"; cas::util::Log("done");
 }

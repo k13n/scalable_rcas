@@ -226,7 +226,11 @@ size_t cas::BulkLoader<VType>::Construct(
     //   this unique key must contain many duplicate references
     node.dimension_ = cas::Dimension::LEAF;
     ConstructLeafNode(node, partition);
-    next_pos += node.ByteSize(0);
+    size_t byte_size = node.ByteSize(0);
+    next_pos += byte_size;
+    if (context_.compute_leaf_width_) {
+      stats_.leaf_width_.Record(byte_size);
+    }
     ++stats_.nr_leaf_nodes_;
   } else {
     if (dimension == cas::Dimension::PATH && dsc_p >= key_len_p) {
@@ -267,7 +271,11 @@ size_t cas::BulkLoader<VType>::Construct(
       ++dsc_v;
     }
 
-    next_pos += node.ByteSize(table.NrPartitions());
+    size_t byte_size = node.ByteSize(table.NrPartitions());
+    next_pos += byte_size;
+    if (context_.compute_inner_node_width_) {
+      stats_.inner_node_width_.Record(byte_size);
+    }
     for (int byte = 0x00; byte <= 0xFF; ++byte) {
       if (table.Exists(byte)) {
         node.children_pointers_.emplace_back(static_cast<std::byte>(byte), next_pos);

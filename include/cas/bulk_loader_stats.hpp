@@ -45,6 +45,8 @@ struct BulkLoaderStats {
   Timer runtime_collect_keys_;
   Histogram node_depth_;
   Histogram node_fanout_;
+  Histogram inner_node_width_;
+  Histogram leaf_width_;
 
   size_t IoOverhead() const;
   size_t DiskIo() const;
