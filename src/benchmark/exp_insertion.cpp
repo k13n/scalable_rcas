@@ -65,9 +65,11 @@ void benchmark::ExpInsertion<VType>::Execute(double bulkload_fraction)
     auto now = std::chrono::high_resolution_clock::now();
     auto time = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
     std::stringstream ss;
-    ss << "(nr_keys, runtime_ms): ("
+    ss << "(nr_keys, runtime_ms, disk_io): ("
       << nr_inserted_keys << ", "
-      << time << ")\n";
+      << time
+      << index.Stats().DiskIo()
+      << ")\n";
     cas::util::Log(ss.str());
     index.Stats().Dump();
     std::cout << std::flush;
