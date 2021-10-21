@@ -67,7 +67,7 @@ void benchmark::ExpInsertion<VType>::Execute(double bulkload_fraction)
     std::stringstream ss;
     ss << "(nr_keys, runtime_ms, disk_io): ("
       << nr_inserted_keys << ", "
-      << time
+      << time << ", "
       << index.Stats().DiskIo()
       << ")\n";
     cas::util::Log(ss.str());
