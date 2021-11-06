@@ -21,6 +21,7 @@ add_subdirectory(tests)
 ## Various tools
 
 add_executable(app ${CMAKE_CURRENT_SOURCE_DIR}/apps/app.cpp)
+add_executable(count_pages ${CMAKE_CURRENT_SOURCE_DIR}/apps/count_pages.cpp)
 add_executable(create_index ${CMAKE_CURRENT_SOURCE_DIR}/apps/create_index.cpp)
 add_executable(csv2partition ${CMAKE_CURRENT_SOURCE_DIR}/apps/csv2partition.cpp)
 add_executable(partition2csv ${CMAKE_CURRENT_SOURCE_DIR}/apps/partition2csv.cpp)
@@ -29,6 +30,7 @@ add_executable(selectivity_computer ${CMAKE_CURRENT_SOURCE_DIR}/apps/selectivity
 
 # for gcc on linux
 target_link_libraries(app cas stdc++fs)
+target_link_libraries(count_pages cas stdc++fs)
 target_link_libraries(create_index cas stdc++fs)
 target_link_libraries(csv2partition cas stdc++fs)
 target_link_libraries(partition2csv cas stdc++fs)
