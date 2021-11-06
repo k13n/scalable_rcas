@@ -61,7 +61,7 @@ void benchmark::ExpInsertion<VType>::Execute(double bulkload_fraction)
   // insert remaining keys
   auto start = std::chrono::high_resolution_clock::now();
   size_t nr_inserted_keys = 0;
-  auto print_progress = [&start,&nr_inserted_keys,&index]() -> void {
+  auto print_progress = [&start,&nr_inserted_keys,&index](bool detailed) -> void {
     auto now = std::chrono::high_resolution_clock::now();
     auto time = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
     std::stringstream ss;
@@ -71,7 +71,9 @@ void benchmark::ExpInsertion<VType>::Execute(double bulkload_fraction)
       << index.Stats().DiskIo()
       << ")\n";
     cas::util::Log(ss.str());
-    index.Stats().Dump();
+    if (detailed) {
+      index.Stats().Dump();
+    }
     std::cout << std::flush;
   };
   size_t i = nr_pages_bulkload;
@@ -79,14 +81,20 @@ void benchmark::ExpInsertion<VType>::Execute(double bulkload_fraction)
     for (auto key : io_page) {
       index.Insert(key);
       ++nr_inserted_keys;
+      if (nr_inserted_keys % context_copy.max_memory_keys_
+          == context_copy.max_memory_keys_-1) {
+        /* print_progress(false); */
+        print_progress(true);
+      }
       if (nr_inserted_keys % context_copy.max_memory_keys_ == 0) {
-        print_progress();
+        print_progress(true);
       }
     }
     ++i;
   }
+  print_progress(false);
   index.FlushMemoryResidentKeys();
-  print_progress();
+  print_progress(true);
 
   // print results
   std::cout << "\nResults:\n";

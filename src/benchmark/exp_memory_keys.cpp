@@ -56,7 +56,7 @@ void benchmark::ExpMemoryKeys<VType>::Execute(size_t nr_memory_keys)
   // insert remaining keys
   auto start = std::chrono::high_resolution_clock::now();
   size_t nr_inserted_keys = 0;
-  auto print_progress = [&start,&nr_inserted_keys]() -> void {
+  auto print_progress = [&index,&start,&nr_inserted_keys](bool detailed) -> void {
     auto now = std::chrono::high_resolution_clock::now();
     auto time = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
     std::stringstream ss;
@@ -64,6 +64,9 @@ void benchmark::ExpMemoryKeys<VType>::Execute(size_t nr_memory_keys)
       << nr_inserted_keys << ", "
       << time << ")\n";
     cas::util::Log(ss.str());
+    if (detailed) {
+      index.Stats().Dump();
+    }
     std::cout << std::flush;
   };
   size_t i = 0;
@@ -71,14 +74,16 @@ void benchmark::ExpMemoryKeys<VType>::Execute(size_t nr_memory_keys)
     for (auto key : io_page) {
       index.Insert(key);
       ++nr_inserted_keys;
-      if (nr_inserted_keys % context_copy.max_memory_keys_ == 0) {
-        print_progress();
+      const size_t x = 100'000'000;
+      if (nr_inserted_keys % x == 0 || nr_inserted_keys % x == x-1) {
+        print_progress(true);
       }
     }
     ++i;
   }
+  print_progress(true);
   index.FlushMemoryResidentKeys();
-  print_progress();
+  print_progress(true);
 
   // print results
   std::cout << "\nResults:\n";
@@ -98,19 +103,19 @@ template<class VType>
 void benchmark::ExpMemoryKeys<VType>::PrintOutput() {
   std::cout << "\n\n\n";
   cas::util::Log("Summary:\n\n");
-  std::cout << "nr_memory_keys;runtime_ms;runtime_m;runtime_h;disk_overhead_b;disk_overhead_gb;disk_io_gb\n";
+  std::cout << "nr_memory_keys;runtime_ms;runtime_m;runtime_h;disk_overhead_b;disk_overhead_tb;disk_io_gb\n";
   for (const auto& [nr_memory_keys, stats] : results_) {
     auto runtime_ms = std::chrono::duration_cast<std::chrono::milliseconds>(stats.runtime_.time_).count();
     auto runtime_m  = std::chrono::duration_cast<std::chrono::minutes>(stats.runtime_.time_).count();
     auto runtime_h  = std::chrono::duration_cast<std::chrono::hours>(stats.runtime_.time_).count();
     auto disk_overhead_b  = stats.IoOverhead();
-    auto disk_overhead_gb = disk_overhead_b / 1'000'000'000.0;
+    auto disk_overhead_tb = disk_overhead_b / 1'000'000'000'000.0;
     std::cout << nr_memory_keys << ";";
     std::cout << runtime_ms << ";";
     std::cout << runtime_m << ";";
     std::cout << runtime_h << ";";
     std::cout << disk_overhead_b << ";";
-    std::cout << disk_overhead_gb << ";";
+    std::cout << disk_overhead_tb << ";";
     std::cout << stats.DiskIo() / 1'000'000'000.0 << "\n";
   }
 }

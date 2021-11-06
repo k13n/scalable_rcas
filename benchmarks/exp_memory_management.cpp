@@ -5,22 +5,23 @@ int main_(int argc, char** argv) {
   using VType = cas::vint64_t;
   using Exp = benchmark::ExpMemoryManagement<VType>;
 
-  cas::Context context = {
-    .use_direct_io_ = true,
-  };
+  /* cas::Context context = { */
+  /*   .use_direct_io_ = true, */
+  /* }; */
+  cas::Context context;
   benchmark::option_parser::Parse(argc, argv, context);
 
   std::vector<cas::MemoryPlacement> approaches = {
-    cas::MemoryPlacement::FrontLoading,
+    /* cas::MemoryPlacement::FrontLoading, */
     cas::MemoryPlacement::AllOrNothing,
   };
 
   std::vector<size_t> memory_sizes = {
-     16'000'000'000,
-     32'000'000'000,
-     64'000'000'000,
-    128'000'000'000,
-    256'000'000'000,
+     16'000'000'000, //  200M keys
+     32'000'000'000, //  400M keys
+     64'000'000'000, //  800M keys
+    128'000'000'000, // 1600M keys
+    256'000'000'000, // 3200M keys
   };
 
   Exp bm{context, approaches, memory_sizes};

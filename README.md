@@ -48,3 +48,10 @@ Export the first 100GB of a partition to CSV and cut off the last 20 bytes of th
 ```
 head -c 99999989760 /local/scratch/wellenzohn/datasets/dataset.16384.partition | ./partition2csv 16384 | ruby ../scripts/shorten_revision.rb > /local/scratch/wellenzohn/datasets/dataset.100GB.csv
 ```
+
+
+Shuffle dataset
+
+```
+sort -R --parallel=70 --temporary-directory=/local/scratch/wellenzohn/workspace/tmp --buffer-size=80% dataset.csv | /local/scratch/wellenzohn/code/scalable_rcas/release/csv2partition 16384 > dataset.shuffled.16384.partition
+```

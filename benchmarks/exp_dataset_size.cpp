@@ -14,7 +14,7 @@ int main_(int argc, char** argv) {
      79'748'497'408, // ca.   1B keys (  998'859'390)
     239'245'508'608, // ca.   3B keys (2'996'513'870)
     398'742'519'808, // ca.   5B keys (4'994'193'029)
-                  0, // full dataset
+                  0, // full dataset  (6'891'972'832)
   };
 
   Exp bm{context, dataset_sizes};
