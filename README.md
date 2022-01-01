@@ -1,15 +1,9 @@
-# The Scalable RCAS+ Index
+# Robust and Scalable Content-and-Structure Indexing
 
 This is the code for the following paper:
 
-- **Scalable Content-and-Structure Indexing**
+- **Robust and Scalable Content-and-Structure Indexing**
 - Kevin Wellenzohn, Michael Böhlen, Sven Helmer, Antoine Pietri, Stefano Zacchiroli
-
-## Reproducibility
-
-To reproduce the findings in this paper please follow the instructions in the
-[reproducibility package](REPRODUCIBILITY.md).
-
 
 ## Compilation
 
@@ -40,18 +34,11 @@ make
 ```
 
 
+## Datasets
 
-### Scratch
+The four datasets included in the paper can be downloaded here:
 
-Export the first 100GB of a partition to CSV and cut off the last 20 bytes of the revision
-
-```
-head -c 99999989760 /local/scratch/wellenzohn/datasets/dataset.16384.partition | ./partition2csv 16384 | ruby ../scripts/shorten_revision.rb > /local/scratch/wellenzohn/datasets/dataset.100GB.csv
-```
-
-
-Shuffle dataset
-
-```
-sort -R --parallel=70 --temporary-directory=/local/scratch/wellenzohn/workspace/tmp --buffer-size=80% dataset.csv | /local/scratch/wellenzohn/code/scalable_rcas/release/csv2partition 16384 > dataset.shuffled.16384.partition
-```
+- [GitLab](https://download.ifi.uzh.ch/dbtg/wellenzohn/scalable_rcas/gitlab.part16)
+- [ServerFarm](https://download.ifi.uzh.ch/dbtg/wellenzohn/scalable_rcas/sf_size.part16)
+- [Amazon](https://download.ifi.uzh.ch/dbtg/wellenzohn/scalable_rcas/amazon.part16)
+- [XMark](https://download.ifi.uzh.ch/dbtg/wellenzohn/scalable_rcas/xmark.part16)
